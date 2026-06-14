@@ -8,35 +8,35 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #0a0e1a;
-      --bg-secondary: #111827;
-      --bg-card: #1a2236;
-      --bg-card-hover: #1f2a40;
-      --bg-modal: #151d30;
-      --border: #2a3550;
-      --border-hover: #3d4f73;
-      --text-primary: #f0f2f5;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --accent-glow: rgba(59,130,246,0.25);
+      --bg-primary: #f4f6f9;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f9fafb;
+      --bg-modal: #ffffff;
+      --border: #e2e8f0;
+      --border-hover: #cbd5e1;
+      --text-primary: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --accent: #e8651a;
+      --accent-hover: #c9540d;
+      --accent-glow: rgba(232,101,26,0.15);
       /* Status colors */
       --st-arrendado: #22c55e;
-      --st-arrendado-bg: rgba(34,197,94,0.18);
+      --st-arrendado-bg: rgba(34,197,94,0.12);
       --st-fuera-servicio: #ef4444;
-      --st-fuera-servicio-bg: rgba(239,68,68,0.18);
-      --st-mantencion: #eab308;
-      --st-mantencion-bg: rgba(234,179,8,0.18);
-      --st-disponible: #475569;
-      --st-disponible-bg: rgba(71,85,105,0.15);
-      --st-uso-interno: #3b82f6;
-      --st-uso-interno-bg: rgba(59,130,246,0.18);
+      --st-fuera-servicio-bg: rgba(239,68,68,0.12);
+      --st-mantencion: #d97706;
+      --st-mantencion-bg: rgba(217,119,6,0.12);
+      --st-disponible: #64748b;
+      --st-disponible-bg: rgba(100,116,139,0.1);
+      --st-uso-interno: #e8651a;
+      --st-uso-interno-bg: rgba(232,101,26,0.12);
       --st-en-taller: #a855f7;
-      --st-en-taller-bg: rgba(168,85,247,0.18);
+      --st-en-taller-bg: rgba(168,85,247,0.12);
       --radius: 10px;
       --radius-sm: 6px;
-      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --shadow: 0 10px 25px -5px rgba(15,23,42,0.08), 0 8px 16px -6px rgba(15,23,42,0.04);
       --transition: all 0.2s ease;
     }
 
@@ -58,7 +58,7 @@
 
     .sidebar {
       width: 260px;
-      background: linear-gradient(180deg, #0f172a 0%, #0d1220 100%);
+      background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
@@ -70,13 +70,13 @@
 
     .sidebar-header {
       padding: 24px;
-      border-bottom: 1px solid rgba(42, 53, 80, 0.3);
+      border-bottom: 1px solid var(--border);
     }
 
     .sidebar-logo {
       font-size: 22px;
       font-weight: 800;
-      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      background: linear-gradient(135deg, var(--accent), #ff7a2f);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       letter-spacing: -0.5px;
@@ -117,13 +117,13 @@
     }
 
     .menu-item:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: rgba(0, 0, 0, 0.02);
       color: var(--text-primary);
     }
 
     .menu-item.active {
-      background: rgba(59, 130, 246, 0.08);
-      border-color: rgba(59, 130, 246, 0.2);
+      background: rgba(232, 101, 26, 0.08);
+      border-color: rgba(232, 101, 26, 0.2);
       color: var(--accent);
       font-weight: 600;
     }
@@ -282,7 +282,7 @@
     }
 
     .kpi-card:nth-child(1)::before { background: linear-gradient(90deg, #22c55e, #16a34a); }
-    .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, #e8651a, #ff7a2f); }
     .kpi-card:nth-child(3)::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
     .kpi-card:nth-child(4)::before { background: linear-gradient(90deg, #a855f7, #9333ea); }
 
@@ -824,9 +824,9 @@
       display: inline-block;
       font-size: 11px;
       font-weight: 700;
-      color: #3b82f6;
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px solid rgba(59, 130, 246, 0.2);
+      color: var(--accent);
+      background: rgba(232, 101, 26, 0.1);
+      border: 1px solid rgba(232, 101, 26, 0.2);
       padding: 4px 10px;
       border-radius: 20px;
       text-transform: uppercase;
