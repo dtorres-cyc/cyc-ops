@@ -34,6 +34,21 @@
       --st-uso-interno-bg: rgba(232,101,26,0.12);
       --st-en-taller: #a855f7;
       --st-en-taller-bg: rgba(168,85,247,0.12);
+      /* Mechanics status colors */
+      --st-mec-trabajado: #10b981;
+      --st-mec-trabajado-bg: rgba(16,185,129,0.12);
+      --st-mec-extra: #3b82f6;
+      --st-mec-extra-bg: rgba(59,130,246,0.12);
+      --st-mec-subida: #f59e0b;
+      --st-mec-subida-bg: rgba(245,158,11,0.12);
+      --st-mec-bajada: #d97706;
+      --st-mec-bajada-bg: rgba(217,119,6,0.12);
+      --st-mec-descanso: #64748b;
+      --st-mec-descanso-bg: rgba(100,116,139,0.1);
+      --st-mec-licencia: #ec4899;
+      --st-mec-licencia-bg: rgba(236,72,153,0.12);
+      --st-mec-vacaciones: #06b6d4;
+      --st-mec-vacaciones-bg: rgba(6,182,212,0.12);
       --radius: 10px;
       --radius-sm: 6px;
       --shadow: 0 10px 25px -5px rgba(15,23,42,0.08), 0 8px 16px -6px rgba(15,23,42,0.04);
@@ -555,6 +570,16 @@
     .day-cell[data-estado="disponible"]      { background: var(--st-disponible-bg); border: 1px solid rgba(71,85,105,0.25); }
     .day-cell[data-estado="uso_interno"]     { background: var(--st-uso-interno-bg); border: 1px solid rgba(59,130,246,0.4); }
     .day-cell[data-estado="en_taller"]       { background: var(--st-en-taller-bg); border: 1px solid rgba(168,85,247,0.4); }
+    
+    /* Mechanics day-cell styles */
+    .day-cell[data-estado="trabajado"]   { background: var(--st-mec-trabajado-bg); border: 1px solid rgba(16,185,129,0.4); color: #10b981; font-weight: bold; font-size: 9px; }
+    .day-cell[data-estado="extra"]       { background: var(--st-mec-extra-bg); border: 1px solid rgba(59,130,246,0.4); color: #3b82f6; font-weight: bold; font-size: 9px; }
+    .day-cell[data-estado="subida"]      { background: var(--st-mec-subida-bg); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; font-weight: bold; font-size: 9px; }
+    .day-cell[data-estado="bajada"]      { background: var(--st-mec-bajada-bg); border: 1px solid rgba(217,119,6,0.4); color: #d97706; font-weight: bold; font-size: 9px; }
+    .day-cell[data-estado="descanso"]    { background: var(--st-mec-descanso-bg); border: 1px solid rgba(100,116,139,0.25); color: #64748b; font-size: 9px; }
+    .day-cell[data-estado="licencia"]    { background: var(--st-mec-licencia-bg); border: 1px solid rgba(236,72,153,0.4); color: #ec4899; font-weight: bold; font-size: 9px; }
+    .day-cell[data-estado="vacaciones"]  { background: var(--st-mec-vacaciones-bg); border: 1px solid rgba(6,182,212,0.4); color: #06b6d4; font-weight: bold; font-size: 9px; }
+    
     .day-cell:not([data-estado])             { background: rgba(30,41,59,0.4); border: 1px solid rgba(42,53,80,0.3); }
 
     /* Drag selection */
@@ -677,6 +702,15 @@
     .status-btn[data-status="disponible"].active      { background: var(--st-disponible); border-color: var(--st-disponible); }
     .status-btn[data-status="uso_interno"].active     { background: var(--st-uso-interno); border-color: var(--st-uso-interno); }
     .status-btn[data-status="en_taller"].active       { background: var(--st-en-taller); border-color: var(--st-en-taller); }
+
+    /* Mechanics status-btn active styles */
+    .status-btn[data-status="trabajado"].active   { background: #10b981; border-color: #10b981; }
+    .status-btn[data-status="extra"].active       { background: #3b82f6; border-color: #3b82f6; }
+    .status-btn[data-status="subida"].active      { background: #f59e0b; border-color: #f59e0b; }
+    .status-btn[data-status="bajada"].active      { background: #d97706; border-color: #d97706; }
+    .status-btn[data-status="descanso"].active    { background: #64748b; border-color: #64748b; }
+    .status-btn[data-status="licencia"].active    { background: #ec4899; border-color: #ec4899; }
+    .status-btn[data-status="vacaciones"].active  { background: #06b6d4; border-color: #06b6d4; }
 
     .modal-input {
       width: 100%;
@@ -919,13 +953,13 @@
           <span class="menu-icon">📋</span> Inspección de Equipos
         </button>
         <button class="menu-item" data-tab="mecanicos" onclick="switchTab('mecanicos')">
-          <span class="menu-icon">🔧</span> Cal. Mecánicos <span class="badge-menu">Soon</span>
+          <span class="menu-icon">🔧</span> Cal. Mecánicos
         </button>
         <button class="menu-item" data-tab="ordenes" onclick="switchTab('ordenes')">
           <span class="menu-icon">📝</span> Órdenes de Trabajo <span class="badge-menu">Soon</span>
         </button>
         <button class="menu-item" data-tab="equipos" onclick="switchTab('equipos')">
-          <span class="menu-icon">⚙️</span> Gestión de Equipos
+          <span class="menu-icon">⚙️</span> Gestión de Recursos
         </button>
       </nav>
       
@@ -1028,16 +1062,93 @@
       <!-- PANEL: CALENDARIO DE MECÁNICOS -->
       <div class="tab-panel" id="panel-mecanicos">
         <div class="content-header">
-          <h1 class="page-title">🔧 Calendario de Mecánicos</h1>
+          <h1 class="page-title">🔧 Calendario Operacional de Mecánicos</h1>
         </div>
-        <div class="coming-soon-panel">
-          <div class="coming-soon-card">
-            <div class="cs-icon">🔧</div>
-            <h2>Calendario de Mecánicos</h2>
-            <p class="cs-badge">Próximamente</p>
-            <p class="cs-desc">
-              Este módulo permitirá gestionar la planificación de turnos de los mecánicos, asignación de tareas de mantenimiento en faena y control de horas extras y disponibilidad en taller.
-            </p>
+        
+        <!-- KPI Bar -->
+        <div class="kpi-bar">
+          <div class="kpi-card">
+            <div class="kpi-label">Días Trabajados (Turno Normal)</div>
+            <div class="kpi-value" id="kpiMecTrabajados">—</div>
+            <div class="kpi-sub" id="kpiMecTrabajadosSub">total acumulado en el mes</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Días Extras</div>
+            <div class="kpi-value" id="kpiMecExtras">—</div>
+            <div class="kpi-sub" id="kpiMecExtrasSub">turnos extraordinarios</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Días de Viaje</div>
+            <div class="kpi-value" id="kpiMecViaje">—</div>
+            <div class="kpi-sub" id="kpiMecViajeSub">subidas y bajadas</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Mecánicos Activos</div>
+            <div class="kpi-value" id="kpiMecActivos">—</div>
+            <div class="kpi-sub" id="kpiMecActivosSub">en la grilla</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+          <div class="controls-left">
+            <div class="month-nav">
+              <button onclick="changeMonthMec(-1)">‹</button>
+              <div class="month-label" id="monthLabelMec"></div>
+              <button onclick="changeMonthMec(1)">›</button>
+            </div>
+            <button class="btn btn-sm" onclick="goTodayMec()">Hoy</button>
+          </div>
+          <div class="controls-right">
+            <select class="filter-select" id="filterRolMec" onchange="renderCalendarMec()">
+              <option value="">Todos los roles</option>
+            </select>
+            <select class="filter-select" id="filterUbicacionMec" onchange="renderCalendarMec()">
+              <option value="">Todas las ubicaciones</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Trabajado</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Día Extra</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Subida a Faena</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>Bajada de Faena</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Descanso</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ec4899"></div>Licencia / Permiso</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Vacaciones</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; width:8px; height:8px; border-radius:50%;"></div>Con comentario</div>
+        </div>
+
+        <!-- Calendar Container -->
+        <div class="calendar-container" id="calendarContainerMec">
+          <div class="empty-state" id="emptyStateMec">
+            <div class="empty-icon">🔧</div>
+            <h3>Sin mecánicos registrados</h3>
+            <p>Registra mecánicos en la pestaña de Gestión de Recursos.</p>
+          </div>
+        </div>
+
+        <!-- Summary Table Section -->
+        <div style="margin-top: 30px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);">
+          <h2 style="font-size: 16px; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">📊 Resumen Mensual por Mecánico</h2>
+          <div style="overflow-x: auto;">
+            <table class="calendar-table" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th class="th-equipo" style="width: 250px;">Mecánico</th>
+                  <th style="padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: left;">Rol</th>
+                  <th style="padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; width: 120px;">Días Trabajados</th>
+                  <th style="padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; width: 100px;">Días Extras</th>
+                  <th style="padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: center; width: 100px;">Días de Viaje</th>
+                  <th style="padding: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); text-align: left;">Ubicaciones donde estuvo</th>
+                </tr>
+              </thead>
+              <tbody id="summaryMecBody">
+                <!-- dynamic content -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1059,14 +1170,51 @@
         </div>
       </div>
 
-      <!-- PANEL: GESTIÓN DE EQUIPOS -->
+      <!-- PANEL: GESTIÓN DE RECURSOS -->
       <div class="tab-panel" id="panel-equipos">
         <div class="content-header">
-          <h1 class="page-title">⚙️ Gestión de Equipos del Parque</h1>
+          <h1 class="page-title">⚙️ Gestión de Recursos Operacionales</h1>
         </div>
         <div class="tab-content-inner">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
+            
+            <!-- MECÁNICOS MANAGEMENT -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🔧 Agregar Nuevo Mecánico</h3>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                  <div>
+                    <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Nombre Completo</label>
+                    <input class="modal-input" id="newMecanicoNombre" placeholder="Ej: Juan Pérez" style="margin-bottom:0;">
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Rol / Cargo</label>
+                    <input class="modal-input" id="newMecanicoRol" placeholder="Ej: Mecánico Mayor" style="margin-bottom:0;">
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="addMecanico()" style="height:37px; margin-top: 16px; width: 100%;">+ Agregar Mecánico</button>
+            </div>
+
+            <!-- UBICACIONES MANAGEMENT -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">📍 Agregar Nueva Ubicación</h3>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                  <div>
+                    <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Nombre de Ubicación / Faena</label>
+                    <input class="modal-input" id="newUbicacionNombre" placeholder="Ej: Antofagasta" style="margin-bottom:0;">
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="addUbicacion()" style="height:37px; margin-top: 16px; width: 100%;">+ Agregar Ubicación</button>
+            </div>
+
+          </div>
+
+          <!-- EQUIPOS MANAGEMENT -->
           <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:28px; box-shadow:var(--shadow);">
-            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">Agregar Nuevo Equipo</h3>
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🚜 Agregar Nuevo Equipo</h3>
             <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
               <div>
                 <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">N° Interno</label>
@@ -1084,8 +1232,24 @@
             </div>
           </div>
           
-          <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">Equipos Registrados</h3>
-          <div class="equipo-list" id="equipoList"></div>
+          <!-- LISTS SECTION -->
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <!-- LEFT: EQUIPOS AND MECÁNICOS LIST -->
+            <div>
+              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🚜 Equipos del Parque</h3>
+              <div class="equipo-list" id="equipoList" style="margin-bottom: 30px;"></div>
+
+              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🔧 Personal de Mecánicos</h3>
+              <div class="equipo-list" id="mecanicoList"></div>
+            </div>
+
+            <!-- RIGHT: UBICACIONES LIST -->
+            <div>
+              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">📍 Ubicaciones Habilitadas</h3>
+              <div class="equipo-list" id="ubicacionList" style="grid-template-columns: 1fr;"></div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -1129,6 +1293,43 @@
     </div>
   </div>
 
+  <!-- ─── Mecánico Cell Modal ────────────────────────────────────── -->
+  <div class="modal-overlay" id="mecCellModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="mecModalTitle"></h3>
+          <div class="modal-date" id="mecModalDate"></div>
+        </div>
+        <button class="modal-close" onclick="closeMecModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>Estado del Turno</label>
+        <div class="status-grid" id="mecStatusGrid" style="grid-template-columns: repeat(3, 1fr);">
+          <button class="status-btn" data-status="trabajado" onclick="selectStatusMec('trabajado')">🟢 Trabajado</button>
+          <button class="status-btn" data-status="extra" onclick="selectStatusMec('extra')">🔵 Día Extra</button>
+          <button class="status-btn" data-status="subida" onclick="selectStatusMec('subida')">🟠 Subida</button>
+          <button class="status-btn" data-status="bajada" onclick="selectStatusMec('bajada')">🟤 Bajada</button>
+          <button class="status-btn" data-status="descanso" onclick="selectStatusMec('descanso')">⚪ Descanso</button>
+          <button class="status-btn" data-status="licencia" onclick="selectStatusMec('licencia')">🔴 Licencia</button>
+          <button class="status-btn" data-status="vacaciones" onclick="selectStatusMec('vacaciones')" style="grid-column: span 3;">🟡 Vacaciones</button>
+        </div>
+
+        <label>Ubicación / Faena</label>
+        <select class="modal-input" id="mecModalUbicacion">
+          <option value="">-- Sin ubicación --</option>
+        </select>
+
+        <label>Comentario / Observación</label>
+        <textarea class="modal-input" id="mecModalComentario" placeholder="Ej: Turno extra por mantención imprevista..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeMecModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveMecCell()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── Sync Modal ─────────────────────────────────────────────── -->
   <div class="modal-overlay" id="syncModal">
     <div class="modal">
@@ -1157,6 +1358,18 @@
     let selectedStatus = 'disponible';
     let activeTab = 'calendario';
     
+    // Mechanics & Locations State
+    let mecanicos = [];
+    let ubicaciones = [];
+    let registrosMec = {}; // { "mecanico_id|fecha": { estado, ubicacion, comentario } }
+    let currentYearMec, currentMonthMec;
+    let selectedStatusMec = 'descanso';
+    let editingCellMec = null; // { mecanico_id, fecha }
+    let isDraggingMec = false;
+    let dragMecanico = null;
+    let dragStartDayMec = null;
+    let dragDaysMec = new Set();
+    
     let config = {
       cycHubUrl: 'https://cyc-hub-production.up.railway.app',
       cycInspeccionesUrl: 'https://cyc-inspecciones-production.up.railway.app'
@@ -1176,6 +1389,10 @@
       const now = new Date();
       currentYear = now.getFullYear();
       currentMonth = now.getMonth() + 1;
+      
+      currentYearMec = now.getFullYear();
+      currentMonthMec = now.getMonth() + 1;
+      
       loadConfig().then(() => {
         switchTab('calendario');
       });
@@ -1211,8 +1428,12 @@
       // Load data accordingly
       if (tabId === 'calendario') {
         loadAll();
+      } else if (tabId === 'mecanicos') {
+        loadAllMec();
       } else if (tabId === 'equipos') {
         loadEquipos();
+        loadMecanicos();
+        loadUbicaciones();
       } else if (tabId === 'inspecciones') {
         const iframe = document.getElementById('iframe-inspecciones');
         if (iframe && !iframe.getAttribute('src')) {
@@ -1639,11 +1860,493 @@
     document.getElementById('syncModal').addEventListener('click', function(e) {
       if (e.target === this) closeSyncModal();
     });
+    document.getElementById('mecCellModal').addEventListener('click', function(e) {
+      if (e.target === this) closeMecModal();
+    });
 
     // Keyboard
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closeSyncModal(); }
+      if (e.key === 'Escape') { closeModal(); closeSyncModal(); closeMecModal(); }
     });
+
+    // ─── Mecánicos & Ubicaciones Backend Integrations ───────────
+
+    async function loadAllMec() {
+      showToast('Cargando mecánicos...', 'info');
+      await loadMecanicos();
+      await loadUbicaciones();
+      await loadRegistrosMec();
+      await loadStatsMec();
+      renderCalendarMec();
+      populateFiltersMec();
+    }
+
+    async function loadMecanicos() {
+      try {
+        const res = await fetch('/api/mecanicos');
+        mecanicos = await res.json();
+        renderMecanicoList();
+      } catch (e) {
+        console.error('Error loading mecanicos:', e);
+        showToast('Error al cargar mecánicos', 'error');
+      }
+    }
+
+    async function loadUbicaciones() {
+      try {
+        const res = await fetch('/api/ubicaciones');
+        ubicaciones = await res.json();
+        renderUbicacionList();
+        populateUbicacionDropdowns();
+      } catch (e) {
+        console.error('Error loading ubicaciones:', e);
+        showToast('Error al cargar ubicaciones', 'error');
+      }
+    }
+
+    async function loadRegistrosMec() {
+      try {
+        const mes = `${currentYearMec}-${String(currentMonthMec).padStart(2, '0')}`;
+        const res = await fetch(`/api/calendario/mecanicos?mes=${mes}`);
+        const data = await res.json();
+        registrosMec = {};
+        for (const r of data) {
+          registrosMec[`${r.mecanico_id}|${r.fecha}`] = r;
+        }
+      } catch (e) {
+        console.error('Error loading registros mecanicos:', e);
+      }
+    }
+
+    async function loadStatsMec() {
+      try {
+        const mes = `${currentYearMec}-${String(currentMonthMec).padStart(2, '0')}`;
+        const res = await fetch(`/api/stats/mecanicos?mes=${mes}`);
+        const s = await res.json();
+
+        document.getElementById('kpiMecTrabajados').textContent = (s.global?.trabajados || 0) + 'd';
+        document.getElementById('kpiMecExtras').textContent = (s.global?.extras || 0) + 'd';
+        document.getElementById('kpiMecViaje').textContent = (s.global?.viaje || 0) + 'd';
+        document.getElementById('kpiMecActivos').textContent = s.totalMecanicos;
+
+        renderSummaryMecTable(s.byMecanico);
+      } catch (e) {
+        console.error('Error loading stats mecanicos:', e);
+      }
+    }
+
+    function populateFiltersMec() {
+      const filterRol = document.getElementById('filterRolMec');
+      const savedVal = filterRol.value;
+      filterRol.innerHTML = '<option value="">Todos los roles</option>';
+      const roles = [...new Set(mecanicos.map(m => m.rol).filter(Boolean))].sort();
+      roles.forEach(r => {
+        filterRol.insertAdjacentHTML('beforeend', `<option value="${r}">${r}</option>`);
+      });
+      filterRol.value = savedVal;
+
+      const filterUbi = document.getElementById('filterUbicacionMec');
+      const savedUbi = filterUbi.value;
+      filterUbi.innerHTML = '<option value="">Todas las ubicaciones</option>';
+      ubicaciones.forEach(u => {
+        filterUbi.insertAdjacentHTML('beforeend', `<option value="${u.nombre}">${u.nombre}</option>`);
+      });
+      filterUbi.value = savedUbi;
+    }
+
+    function populateUbicacionDropdowns() {
+      const select = document.getElementById('mecModalUbicacion');
+      select.innerHTML = '<option value="">-- Sin ubicación --</option>';
+      ubicaciones.forEach(u => {
+        select.insertAdjacentHTML('beforeend', `<option value="${u.nombre}">${u.nombre}</option>`);
+      });
+    }
+
+    // ─── Render Mechanics Calendar ──────────────────────────────
+
+    function renderCalendarMec() {
+      const container = document.getElementById('calendarContainerMec');
+      const empty = document.getElementById('emptyStateMec');
+      const filterRol = document.getElementById('filterRolMec').value;
+      const filterUbi = document.getElementById('filterUbicacionMec').value;
+
+      let filtered = mecanicos;
+      if (filterRol) {
+        filtered = filtered.filter(m => m.rol === filterRol);
+      }
+      if (filterUbi) {
+        filtered = filtered.filter(m => {
+          const mes = `${currentYearMec}-${String(currentMonthMec).padStart(2, '0')}`;
+          const daysInMonth = new Date(currentYearMec, currentMonthMec, 0).getDate();
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${mes}-${String(d).padStart(2, '0')}`;
+            const key = `${m.id}|${dateStr}`;
+            if (registrosMec[key]?.ubicacion === filterUbi) return true;
+          }
+          return false;
+        });
+      }
+
+      document.getElementById('monthLabelMec').textContent = `${MESES[currentMonthMec - 1]} ${currentYearMec}`;
+
+      if (filtered.length === 0 && mecanicos.length === 0) {
+        empty.style.display = 'block';
+        const table = container.querySelector('.calendar-table');
+        if (table) table.remove();
+        return;
+      }
+
+      empty.style.display = 'none';
+      const daysInMonth = new Date(currentYearMec, currentMonthMec, 0).getDate();
+      const mes = `${currentYearMec}-${String(currentMonthMec).padStart(2, '0')}`;
+
+      let html = '<table class="calendar-table"><thead><tr><th class="th-equipo">Mecánico</th>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(currentYearMec, currentMonthMec - 1, d);
+        const dow = date.getDay();
+        const isWeekend = dow === 0 || dow === 6;
+        html += `<th class="th-day${isWeekend ? ' weekend' : ''}">${d}<br><span style="font-size:9px;font-weight:400;opacity:0.6;">${DIAS_SEMANA[dow]}</span></th>`;
+      }
+      html += '</tr></thead><tbody>';
+
+      for (const mec of filtered) {
+        html += `<tr><td class="td-equipo"><div class="equipo-name">${mec.nombre}</div><div class="equipo-type">${mec.rol || ''}</div></td>`;
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${mes}-${String(d).padStart(2, '0')}`;
+          const key = `${mec.id}|${dateStr}`;
+          const reg = registrosMec[key];
+          const estado = reg?.estado || '';
+          const hasComment = reg?.comentario ? ' has-comment' : '';
+          
+          let cellLabel = '';
+          if (reg?.ubicacion && ['trabajado', 'extra', 'subida', 'bajada'].includes(estado)) {
+            cellLabel = reg.ubicacion.substring(0, 2);
+          }
+
+          const title = reg ? `${estado.toUpperCase()}${reg.ubicacion ? ' @ ' + reg.ubicacion : ''}${reg.comentario ? '\n💬 ' + reg.comentario : ''}` : 'Sin registro (Descanso)';
+
+          html += `<td class="td-day">
+            <div class="day-cell${hasComment}"
+                 data-estado="${estado}"
+                 data-mecanico="${mec.id}"
+                 data-fecha="${dateStr}"
+                 data-day="${d}"
+                 title="${title}"
+                 onclick="openCellMec(${mec.id}, '${dateStr}')"
+                 onmousedown="startDragMec(event, ${mec.id}, ${d})"
+                 onmouseenter="continueDragMec(event, ${mec.id}, ${d})"
+                 onmouseup="endDragMec(event)">
+                 ${cellLabel}
+            </div>
+          </td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+
+      const existingTable = container.querySelector('.calendar-table');
+      if (existingTable) existingTable.remove();
+      
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // ─── Drag Selection for Mechanics ───────────────────────────
+
+    function startDragMec(e, mecanicoId, day) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      isDraggingMec = true;
+      dragMecanico = mecanicoId;
+      dragStartDayMec = day;
+      dragDaysMec = new Set([day]);
+      highlightDragMec();
+    }
+
+    function continueDragMec(e, mecanicoId, day) {
+      if (!isDraggingMec || mecanicoId !== dragMecanico) return;
+      const minD = Math.min(dragStartDayMec, day);
+      const maxD = Math.max(dragStartDayMec, day);
+      dragDaysMec = new Set();
+      for (let d = minD; d <= maxD; d++) dragDaysMec.add(d);
+      highlightDragMec();
+    }
+
+    function endDragMec(e) {
+      if (!isDraggingMec) return;
+      isDraggingMec = false;
+      if (dragDaysMec.size > 1) {
+        openBatchModalMec();
+      }
+      clearDragHighlightMec();
+    }
+
+    document.addEventListener('mouseup', () => {
+      if (isDraggingMec) {
+        isDraggingMec = false;
+        if (dragDaysMec.size > 1) {
+          openBatchModalMec();
+        }
+        clearDragHighlightMec();
+      }
+    });
+
+    function highlightDragMec() {
+      clearDragHighlightMec();
+      document.querySelectorAll(`.day-cell[data-mecanico="${dragMecanico}"]`).forEach(cell => {
+        const d = parseInt(cell.dataset.day);
+        if (dragDaysMec.has(d)) cell.classList.add('drag-highlight');
+      });
+    }
+
+    function clearDragHighlightMec() {
+      document.querySelectorAll('.day-cell.drag-highlight').forEach(c => c.classList.remove('drag-highlight'));
+    }
+
+    // ─── Month Navigation Mechanics ─────────────────────────────
+
+    function changeMonthMec(val) {
+      currentMonthMec += val;
+      if (currentMonthMec > 12) {
+        currentMonthMec = 1;
+        currentYearMec++;
+      } else if (currentMonthMec < 1) {
+        currentMonthMec = 12;
+        currentYearMec--;
+      }
+      loadRegistrosMec().then(() => {
+        loadStatsMec();
+        renderCalendarMec();
+      });
+    }
+
+    function goTodayMec() {
+      const now = new Date();
+      currentYearMec = now.getFullYear();
+      currentMonthMec = now.getMonth() + 1;
+      loadRegistrosMec().then(() => {
+        loadStatsMec();
+        renderCalendarMec();
+      });
+    }
+
+    // ─── Cell Modal Mechanics ────────────────────────────────────
+
+    function openCellMec(mecanicoId, fecha) {
+      if (isDraggingMec) return;
+      const mec = mecanicos.find(m => m.id === mecanicoId);
+      if (!mec) return;
+
+      editingCellMec = { mecanico_id: mecanicoId, fecha, isBatch: false };
+      const key = `${mecanicoId}|${fecha}`;
+      const reg = registrosMec[key];
+
+      document.getElementById('mecModalTitle').textContent = mec.nombre;
+      document.getElementById('mecModalDate').textContent = `Día ${fecha.substring(8,10)} de ${MESES[parseInt(fecha.substring(5,7)) - 1]} ${fecha.substring(0,4)}`;
+
+      selectStatusMec(reg?.estado || 'descanso');
+      document.getElementById('mecModalUbicacion').value = reg?.ubicacion || '';
+      document.getElementById('mecModalComentario').value = reg?.comentario || '';
+
+      document.getElementById('mecCellModal').classList.add('active');
+    }
+
+    function openBatchModalMec() {
+      const mes = `${currentYearMec}-${String(currentMonthMec).padStart(2, '0')}`;
+      const sortedDays = [...dragDaysMec].sort((a, b) => a - b);
+      editingCellMec = {
+        mecanico_id: dragMecanico,
+        fechas: sortedDays.map(d => `${mes}-${String(d).padStart(2, '0')}`),
+        isBatch: true
+      };
+
+      const mec = mecanicos.find(m => m.id === dragMecanico);
+      document.getElementById('mecModalTitle').textContent = mec ? mec.nombre : '';
+      document.getElementById('mecModalDate').textContent = `${sortedDays.length} días seleccionados (${sortedDays[0]} - ${sortedDays[sortedDays.length - 1]} ${MESES[currentMonthMec - 1]})`;
+
+      selectStatusMec('descanso');
+      document.getElementById('mecModalUbicacion').value = '';
+      document.getElementById('mecModalComentario').value = '';
+
+      document.getElementById('mecCellModal').classList.add('active');
+    }
+
+    function selectStatusMec(status) {
+      selectedStatusMec = status;
+      document.querySelectorAll('#mecStatusGrid .status-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.status === status);
+      });
+    }
+
+    function closeMecModal() {
+      document.getElementById('mecCellModal').classList.remove('active');
+      editingCellMec = null;
+    }
+
+    async function saveMecCell() {
+      if (!editingCellMec) return;
+      const ubi = document.getElementById('mecModalUbicacion').value;
+      const com = document.getElementById('mecModalComentario').value.trim();
+
+      try {
+        if (editingCellMec.isBatch) {
+          const res = await fetch('/api/calendario/mecanicos/batch', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mecanico_id: editingCellMec.mecanico_id,
+              fechas: editingCellMec.fechas,
+              estado: selectedStatusMec,
+              ubicacion: ubi || null,
+              comentario: com || null
+            })
+           });
+           if (!res.ok) throw new Error('Error al guardar registros agrupados');
+           toast(`✅ ${editingCellMec.fechas.length} días guardados`, 'success');
+        } else {
+          const res = await fetch('/api/calendario/mecanicos', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mecanico_id: editingCellMec.mecanico_id,
+              fecha: editingCellMec.fecha,
+              estado: selectedStatusMec,
+              ubicacion: ubi || null,
+              comentario: com || null
+            })
+          });
+          if (!res.ok) throw new Error('Error al guardar registro diario');
+          toast('✅ Registro guardado', 'success');
+        }
+
+        closeMecModal();
+        await loadRegistrosMec();
+        await loadStatsMec();
+        renderCalendarMec();
+      } catch (e) {
+        console.error('Error saving shift:', e);
+        toast('❌ Error guardando: ' + e.message, 'error');
+      }
+    }
+
+    function renderSummaryMecTable(summaryData) {
+      const body = document.getElementById('summaryMecBody');
+      body.innerHTML = '';
+      if (!summaryData || summaryData.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No hay turnos registrados en este mes.</td></tr>';
+        return;
+      }
+
+      summaryData.forEach(s => {
+        body.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td class="td-equipo" style="padding:10px; font-weight:600;">${s.nombre}</td>
+            <td style="padding:10px; color:var(--text-secondary);">${s.rol || 'Sin rol'}</td>
+            <td style="padding:10px; text-align:center; font-weight:700; color:#10b981;">${s.trabajados}d</td>
+            <td style="padding:10px; text-align:center; font-weight:700; color:#3b82f6;">${s.extras}d</td>
+            <td style="padding:10px; text-align:center; color:#f59e0b;">${s.viajes}d</td>
+            <td style="padding:10px; font-size:12px; color:var(--text-secondary);">${s.ubicacionesStr}</td>
+          </tr>
+        `);
+      });
+    }
+
+    // ─── CRUD Resources Management ───────────────────────────────
+
+    function renderMecanicoList() {
+      const list = document.getElementById('mecanicoList');
+      list.innerHTML = '';
+      if (mecanicos.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding: 10px;">No hay mecánicos registrados.</div>';
+        return;
+      }
+      mecanicos.forEach(m => {
+        list.insertAdjacentHTML('beforeend', `
+          <div class="equipo-chip">
+            <div class="equipo-chip-info">
+              <div class="eq-id">${m.nombre}</div>
+              <div class="eq-tipo">${m.rol || 'Sin rol'}</div>
+            </div>
+            <button class="delete-btn" onclick="deleteMecanico(${m.id})" title="Desactivar">×</button>
+          </div>
+        `);
+      });
+    }
+
+    function renderUbicacionList() {
+      const list = document.getElementById('ubicacionList');
+      list.innerHTML = '';
+      if (ubicaciones.length === 0) {
+        list.innerHTML = '<div style="color:var(--text-muted); font-size:13px; padding: 10px;">No hay ubicaciones registradas.</div>';
+        return;
+      }
+      ubicaciones.forEach(u => {
+        list.insertAdjacentHTML('beforeend', `
+          <div class="equipo-chip" style="margin-bottom:6px;">
+            <div class="equipo-chip-info">
+              <div class="eq-id">${u.nombre}</div>
+            </div>
+          </div>
+        `);
+      });
+    }
+
+    async function addMecanico() {
+      const nombre = document.getElementById('newMecanicoNombre').value.trim();
+      const rol = document.getElementById('newMecanicoRol').value.trim();
+      if (!nombre) return toast('⚠️ Nombre requerido', 'error');
+
+      try {
+        const res = await fetch('/api/mecanicos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, rol: rol || null })
+        });
+        if (!res.ok) throw new Error('Error backend');
+        
+        document.getElementById('newMecanicoNombre').value = '';
+        document.getElementById('newMecanicoRol').value = '';
+        toast('✅ Mecánico agregado', 'success');
+        await loadMecanicos();
+      } catch (e) {
+        toast('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function deleteMecanico(id) {
+      if (!confirm('¿Seguro que deseas dar de baja a este mecánico?')) return;
+      try {
+        const res = await fetch(`/api/mecanicos/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error al dar de baja');
+        toast('🗑️ Mecánico dado de baja', 'success');
+        await loadMecanicos();
+      } catch (e) {
+        toast('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function addUbicacion() {
+      const nombre = document.getElementById('newUbicacionNombre').value.trim();
+      if (!nombre) return toast('⚠️ Nombre de ubicación requerido', 'error');
+
+      try {
+        const res = await fetch('/api/ubicaciones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre })
+        });
+        if (!res.ok) throw new Error('Error al agregar ubicación');
+
+        document.getElementById('newUbicacionNombre').value = '';
+        toast('✅ Ubicación agregada', 'success');
+        await loadUbicaciones();
+      } catch (e) {
+        toast('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    function showToast(msg, type = 'success') {
+      toast(msg, type === 'info' ? 'success' : type);
+    }
   </script>
 </body>
 </html>

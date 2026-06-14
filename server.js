@@ -317,7 +317,243 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
+// ─── MECÁNICOS CRUD ──────────────────────────────────────────────────────────
+
+// GET all mecanicos
+app.get('/api/mecanicos', (req, res) => {
+  try {
+    const mecanicos = db.prepare('SELECT * FROM mecanicos WHERE activo = 1 ORDER BY nombre').all();
+    res.json(mecanicos);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST add/update mecanico
+app.post('/api/mecanicos', (req, res) => {
+  try {
+    const { id, nombre, rol } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+
+    if (id) {
+      const stmt = db.prepare('UPDATE mecanicos SET nombre = ?, rol = ? WHERE id = ?');
+      stmt.run(nombre.trim(), rol || null, id);
+    } else {
+      const stmt = db.prepare('INSERT INTO mecanicos (nombre, rol) VALUES (?, ?)');
+      stmt.run(nombre.trim(), rol || null);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE mecanico (soft delete)
+app.delete('/api/mecanicos/:id', (req, res) => {
+  try {
+    db.prepare('UPDATE mecanicos SET activo = 0 WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── UBICACIONES CRUD ────────────────────────────────────────────────────────
+
+// GET all ubicaciones
+app.get('/api/ubicaciones', (req, res) => {
+  try {
+    const ubicaciones = db.prepare('SELECT * FROM ubicaciones WHERE activo = 1 ORDER BY nombre').all();
+    res.json(ubicaciones);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST add/update ubicacion
+app.post('/api/ubicaciones', (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre de ubicación requerido' });
+
+    const stmt = db.prepare(`
+      INSERT INTO ubicaciones (nombre) VALUES (?)
+      ON CONFLICT(nombre) DO UPDATE SET activo = 1
+    `);
+    stmt.run(nombre.trim());
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── CALENDARIO DE MECÁNICOS ─────────────────────────────────────────────────
+
+// GET registros de un mes: ?mes=2026-06
+app.get('/api/calendario/mecanicos', (req, res) => {
+  try {
+    const mes = req.query.mes;
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
+      return res.status(400).json({ error: 'Parámetro mes requerido (formato: YYYY-MM)' });
+    }
+    const registros = db.prepare(`
+      SELECT * FROM registro_mecanicos
+      WHERE fecha LIKE ? || '%'
+      ORDER BY mecanico_id, fecha
+    `).all(mes);
+    res.json(registros);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT upsert a single day for a mechanic
+app.put('/api/calendario/mecanicos', (req, res) => {
+  try {
+    const { mecanico_id, fecha, estado, ubicacion, comentario } = req.body;
+    if (!mecanico_id || !fecha) return res.status(400).json({ error: 'mecanico_id y fecha requeridos' });
+
+    db.prepare(`
+      INSERT INTO registro_mecanicos (mecanico_id, fecha, estado, ubicacion, comentario, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(mecanico_id, fecha) DO UPDATE SET
+        estado     = excluded.estado,
+        ubicacion  = excluded.ubicacion,
+        comentario = excluded.comentario,
+        updated_at = datetime('now')
+    `).run(mecanico_id, fecha, estado || 'descanso', ubicacion || null, comentario || null);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT batch update for mechanics
+app.put('/api/calendario/mecanicos/batch', (req, res) => {
+  try {
+    const { mecanico_id, fechas, estado, ubicacion, comentario } = req.body;
+    if (!mecanico_id || !fechas || !Array.isArray(fechas)) {
+      return res.status(400).json({ error: 'mecanico_id y fechas[] requeridos' });
+    }
+
+    const stmt = db.prepare(`
+      INSERT INTO registro_mecanicos (mecanico_id, fecha, estado, ubicacion, comentario, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(mecanico_id, fecha) DO UPDATE SET
+        estado     = excluded.estado,
+        ubicacion  = excluded.ubicacion,
+        comentario = excluded.comentario,
+        updated_at = datetime('now')
+    `);
+
+    const batchUpdate = db.transaction((dates) => {
+      for (const f of dates) {
+        stmt.run(mecanico_id, f, estado || 'descanso', ubicacion || null, comentario || null);
+      }
+    });
+
+    batchUpdate(fechas);
+    res.json({ ok: true, updated: fechas.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET stats de mecanicos para un mes: ?mes=2026-06
+app.get('/api/stats/mecanicos', (req, res) => {
+  try {
+    const mes = req.query.mes;
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
+      return res.status(400).json({ error: 'Parámetro mes requerido (formato: YYYY-MM)' });
+    }
+
+    const totalMecanicos = db.prepare('SELECT COUNT(*) as cnt FROM mecanicos WHERE activo = 1').get().cnt;
+
+    const registros = db.prepare(`
+      SELECT r.*, m.nombre, m.rol
+      FROM registro_mecanicos r
+      JOIN mecanicos m ON r.mecanico_id = m.id
+      WHERE r.fecha LIKE ? || '%' AND m.activo = 1
+    `).all(mes);
+
+    const byMecanico = {};
+    let globalTrabajados = 0;
+    let globalExtras = 0;
+    let globalViaje = 0;
+
+    for (const r of registros) {
+      if (!byMecanico[r.mecanico_id]) {
+        byMecanico[r.mecanico_id] = {
+          id: r.mecanico_id,
+          nombre: r.nombre,
+          rol: r.rol,
+          trabajados: 0,
+          extras: 0,
+          viajes: 0,
+          descansos: 0,
+          licencias: 0,
+          vacaciones: 0,
+          ubicaciones: {}
+        };
+      }
+
+      const mStats = byMecanico[r.mecanico_id];
+      if (r.estado === 'trabajado') {
+        mStats.trabajados++;
+        globalTrabajados++;
+      } else if (r.estado === 'extra') {
+        mStats.extras++;
+        globalExtras++;
+      } else if (r.estado === 'subida' || r.estado === 'bajada') {
+        mStats.viajes++;
+        globalViaje++;
+      } else if (r.estado === 'descanso') {
+        mStats.descansos++;
+      } else if (r.estado === 'licencia') {
+        mStats.licencias++;
+      } else if (r.estado === 'vacaciones') {
+        mStats.vacaciones++;
+      }
+
+      if (r.ubicacion && (r.estado === 'trabajado' || r.estado === 'extra' || r.estado === 'subida' || r.estado === 'bajada')) {
+        mStats.ubicaciones[r.ubicacion] = (mStats.ubicaciones[r.ubicacion] || 0) + 1;
+      }
+    }
+
+    const listByMecanico = Object.values(byMecanico).map(m => {
+      const ubiList = Object.entries(m.ubicaciones)
+        .map(([name, count]) => `${name}: ${count}d`)
+        .join(', ');
+      return {
+        ...m,
+        ubicacionesStr: ubiList || 'Ninguna'
+      };
+    });
+
+    const locationsGlobal = {};
+    for (const r of registros) {
+      if (r.ubicacion && (r.estado === 'trabajado' || r.estado === 'extra')) {
+        locationsGlobal[r.ubicacion] = (locationsGlobal[r.ubicacion] || 0) + 1;
+      }
+    }
+
+    res.json({
+      totalMecanicos,
+      global: {
+        trabajados: globalTrabajados,
+        extras: globalExtras,
+        viaje: globalViaje
+      },
+      byMecanico: listByMecanico,
+      locationsGlobal
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Start ───────────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[cyc-ops] Servidor corriendo en http://0.0.0.0:${PORT}`);
 });
+
