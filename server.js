@@ -28,6 +28,15 @@ db.exec(schema);
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
 
+// GET config for frontend URLs
+app.get('/api/config', (req, res) => {
+  res.json({
+    cycHubUrl: process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app',
+    cycInspeccionesUrl: process.env.CYC_INSPECCIONES_URL || 'https://cyc-inspecciones-production.up.railway.app'
+  });
+});
+
+
 // ─── EQUIPOS CRUD ────────────────────────────────────────────────────────────
 
 // GET all equipos

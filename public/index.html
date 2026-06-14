@@ -915,6 +915,9 @@
         <button class="menu-item active" data-tab="calendario" onclick="switchTab('calendario')">
           <span class="menu-icon">🗓️</span> Calendario de Flota
         </button>
+        <button class="menu-item" data-tab="inspecciones" onclick="switchTab('inspecciones')">
+          <span class="menu-icon">📋</span> Inspección de Equipos
+        </button>
         <button class="menu-item" data-tab="mecanicos" onclick="switchTab('mecanicos')">
           <span class="menu-icon">🔧</span> Cal. Mecánicos <span class="badge-menu">Soon</span>
         </button>
@@ -1015,6 +1018,11 @@
             <button class="btn btn-primary" onclick="syncFromHub()">🔄 Sincronizar desde Hub</button>
           </div>
         </div>
+      </div>
+
+      <!-- PANEL: INSPECCIÓN DE EQUIPOS -->
+      <div class="tab-panel" id="panel-inspecciones" style="overflow:hidden;">
+        <iframe id="iframe-inspecciones" src="" style="width:100%; height:100%; border:none; flex:1; min-height:calc(100vh - 60px); background:var(--bg-primary);"></iframe>
       </div>
 
       <!-- PANEL: CALENDARIO DE MECÁNICOS -->
@@ -1148,6 +1156,11 @@
     let editingCell = null; // { equipo_id, fecha }
     let selectedStatus = 'disponible';
     let activeTab = 'calendario';
+    
+    let config = {
+      cycHubUrl: 'https://cyc-hub-production.up.railway.app',
+      cycInspeccionesUrl: 'https://cyc-inspecciones-production.up.railway.app'
+    };
 
     // Drag selection
     let isDragging = false;
@@ -1163,8 +1176,24 @@
       const now = new Date();
       currentYear = now.getFullYear();
       currentMonth = now.getMonth() + 1;
-      switchTab('calendario');
+      loadConfig().then(() => {
+        switchTab('calendario');
+      });
     });
+
+    async function loadConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          config = await res.json();
+          // Update sidebar hub link
+          const hubLink = document.querySelector('.btn-sidebar');
+          if (hubLink) hubLink.href = config.cycHubUrl;
+        }
+      } catch (e) {
+        console.error('Error loading config:', e);
+      }
+    }
 
     function switchTab(tabId) {
       activeTab = tabId;
@@ -1184,6 +1213,11 @@
         loadAll();
       } else if (tabId === 'equipos') {
         loadEquipos();
+      } else if (tabId === 'inspecciones') {
+        const iframe = document.getElementById('iframe-inspecciones');
+        if (iframe && !iframe.src) {
+          iframe.src = config.cycInspeccionesUrl;
+        }
       }
     }
 
