@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyC Ops — Calendario Operacional de Flota</title>
+  <meta name="description" content="Calendario operacional de flota de equipos — Transportes CyC Limitada">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #111827;
+      --bg-card: #1a2236;
+      --bg-card-hover: #1f2a40;
+      --bg-modal: #151d30;
+      --border: #2a3550;
+      --border-hover: #3d4f73;
+      --text-primary: #f0f2f5;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-glow: rgba(59,130,246,0.25);
+      /* Status colors */
+      --st-arrendado: #22c55e;
+      --st-arrendado-bg: rgba(34,197,94,0.18);
+      --st-fuera-servicio: #ef4444;
+      --st-fuera-servicio-bg: rgba(239,68,68,0.18);
+      --st-mantencion: #eab308;
+      --st-mantencion-bg: rgba(234,179,8,0.18);
+      --st-disponible: #475569;
+      --st-disponible-bg: rgba(71,85,105,0.15);
+      --st-uso-interno: #3b82f6;
+      --st-uso-interno-bg: rgba(59,130,246,0.18);
+      --st-en-taller: #a855f7;
+      --st-en-taller-bg: rgba(168,85,247,0.18);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --transition: all 0.2s ease;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-logo {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .header-title {
+      font-size: 15px;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    .btn-icon {
+      padding: 6px 10px;
+      font-size: 16px;
+    }
+
+    /* ─── KPI Bar ────────────────────────────────────────────────── */
+    .kpi-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      padding: 18px 28px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .kpi-card:nth-child(1)::before { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    .kpi-card:nth-child(3)::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .kpi-card:nth-child(4)::before { background: linear-gradient(90deg, #a855f7, #9333ea); }
+
+    .kpi-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ─── Controls ───────────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .controls-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .controls-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .month-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 4px;
+    }
+
+    .month-nav button {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      transition: var(--transition);
+    }
+
+    .month-nav button:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .month-nav .month-label {
+      font-size: 14px;
+      font-weight: 600;
+      padding: 6px 14px;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .filter-select {
+      padding: 7px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .filter-select:hover {
+      border-color: var(--border-hover);
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* ─── Legend ──────────────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 28px 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    /* ─── Calendar Grid ─────────────────────────────────────────── */
+    .calendar-container {
+      padding: 0 28px 28px;
+      overflow-x: auto;
+    }
+
+    .calendar-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-width: 900px;
+    }
+
+    .calendar-table thead th {
+      background: var(--bg-secondary);
+      padding: 10px 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 60px;
+      z-index: 10;
+    }
+
+    .calendar-table thead th.th-equipo {
+      text-align: left;
+      padding-left: 14px;
+      min-width: 120px;
+      position: sticky;
+      left: 0;
+      z-index: 20;
+      background: var(--bg-secondary);
+    }
+
+    .calendar-table thead th.th-day {
+      width: 36px;
+      min-width: 36px;
+      text-align: center;
+    }
+
+    .calendar-table thead th.th-day.weekend {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .calendar-table tbody tr {
+      transition: var(--transition);
+    }
+
+    .calendar-table tbody tr:hover {
+      background: rgba(59,130,246,0.04);
+    }
+
+    .calendar-table tbody tr:not(:last-child) td {
+      border-bottom: 1px solid rgba(42,53,80,0.5);
+    }
+
+    .calendar-table td {
+      padding: 0;
+      vertical-align: middle;
+    }
+
+    .td-equipo {
+      padding: 8px 14px !important;
+      position: sticky;
+      left: 0;
+      background: var(--bg-card);
+      z-index: 5;
+      border-right: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .calendar-table tbody tr:hover .td-equipo {
+      background: var(--bg-card-hover);
+    }
+
+    .equipo-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .equipo-type {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .td-day {
+      text-align: center;
+      padding: 4px 2px !important;
+    }
+
+    .day-cell {
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      margin: 0 auto;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .day-cell:hover {
+      transform: scale(1.25);
+      z-index: 5;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+    }
+
+    .day-cell.has-comment::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 5px;
+      height: 5px;
+      background: #fbbf24;
+      border-radius: 50%;
+    }
+
+    .day-cell.selected {
+      outline: 2px solid #fff;
+      outline-offset: 1px;
+    }
+
+    .day-cell[data-estado="arrendado"]       { background: var(--st-arrendado-bg); border: 1px solid rgba(34,197,94,0.4); }
+    .day-cell[data-estado="fuera_servicio"]  { background: var(--st-fuera-servicio-bg); border: 1px solid rgba(239,68,68,0.4); }
+    .day-cell[data-estado="mantencion"]      { background: var(--st-mantencion-bg); border: 1px solid rgba(234,179,8,0.4); }
+    .day-cell[data-estado="disponible"]      { background: var(--st-disponible-bg); border: 1px solid rgba(71,85,105,0.25); }
+    .day-cell[data-estado="uso_interno"]     { background: var(--st-uso-interno-bg); border: 1px solid rgba(59,130,246,0.4); }
+    .day-cell[data-estado="en_taller"]       { background: var(--st-en-taller-bg); border: 1px solid rgba(168,85,247,0.4); }
+    .day-cell:not([data-estado])             { background: rgba(30,41,59,0.4); border: 1px solid rgba(42,53,80,0.3); }
+
+    /* Drag selection */
+    .day-cell.drag-highlight {
+      outline: 2px dashed var(--accent);
+      outline-offset: 1px;
+    }
+
+    /* ─── Modal ──────────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal {
+      background: var(--bg-modal);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 420px;
+      max-width: 95vw;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6);
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modal-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .modal-header .modal-date {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      transition: var(--transition);
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 18px 22px;
+    }
+
+    .modal-body label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .status-btn {
+      padding: 10px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .status-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+
+    .status-btn.active {
+      color: white;
+    }
+
+    .status-btn[data-status="arrendado"].active       { background: var(--st-arrendado); border-color: var(--st-arrendado); }
+    .status-btn[data-status="fuera_servicio"].active  { background: var(--st-fuera-servicio); border-color: var(--st-fuera-servicio); }
+    .status-btn[data-status="mantencion"].active      { background: var(--st-mantencion); border-color: var(--st-mantencion); color: #000; }
+    .status-btn[data-status="disponible"].active      { background: var(--st-disponible); border-color: var(--st-disponible); }
+    .status-btn[data-status="uso_interno"].active     { background: var(--st-uso-interno); border-color: var(--st-uso-interno); }
+    .status-btn[data-status="en_taller"].active       { background: var(--st-en-taller); border-color: var(--st-en-taller); }
+
+    .modal-input {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      margin-bottom: 16px;
+      transition: var(--transition);
+    }
+
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea.modal-input {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .modal-footer {
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* ─── Sync modal ─────────────────────────────────────────────── */
+    .sync-status {
+      text-align: center;
+      padding: 30px;
+    }
+
+    .sync-status .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 14px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Empty State ────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 30px;
+    }
+
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 20px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ─── Toast ──────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text-primary);
+      box-shadow: var(--shadow);
+      z-index: 9999;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.success { border-left: 3px solid var(--st-arrendado); }
+    .toast.error   { border-left: 3px solid var(--st-fuera-servicio); }
+
+    /* ─── Config Panel ───────────────────────────────────────────── */
+    .config-panel {
+      display: none;
+      padding: 20px 28px;
+    }
+
+    .config-panel.active { display: block; }
+
+    .config-panel h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .equipo-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .equipo-chip {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: var(--transition);
+    }
+
+    .equipo-chip:hover {
+      border-color: var(--border-hover);
+    }
+
+    .equipo-chip-info .eq-id {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .equipo-chip-info .eq-tipo {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .equipo-chip .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 2px;
+      transition: var(--transition);
+    }
+
+    .equipo-chip .delete-btn:hover {
+      color: var(--st-fuera-servicio);
+    }
+
+    /* ─── Scrollbar ──────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .header { padding: 12px 16px; }
+      .kpi-bar { padding: 12px 16px; grid-template-columns: repeat(2, 1fr); }
+      .controls { padding: 12px 16px; }
+      .legend { padding: 0 16px 10px; }
+      .calendar-container { padding: 0 16px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ─── Header ─────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">CyC Ops</div>
+      <div class="header-title">Calendario Operacional de Flota</div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm" id="btnConfig" onclick="toggleConfig()">⚙️ Equipos</button>
+      <button class="btn btn-sm btn-primary" id="btnSync" onclick="syncFromHub()">🔄 Sincronizar Hub</button>
+      <a href="https://cyc-hub-production.up.railway.app" class="btn btn-sm">◀ Hub</a>
+    </div>
+  </header>
+
+  <!-- ─── KPI Bar ────────────────────────────────────────────────── -->
+  <div class="kpi-bar">
+    <div class="kpi-card">
+      <div class="kpi-label">Utilización del Mes</div>
+      <div class="kpi-value" id="kpiUtilizacion">—%</div>
+      <div class="kpi-sub" id="kpiUtilSub">días arrendados / total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Equipos Activos</div>
+      <div class="kpi-value" id="kpiEquipos">—</div>
+      <div class="kpi-sub" id="kpiEquiposSub">en el parque</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Días Fuera de Servicio</div>
+      <div class="kpi-value" id="kpiFS">—</div>
+      <div class="kpi-sub" id="kpiFSSub">equipos con problemas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Sin Arriendo</div>
+      <div class="kpi-value" id="kpiSinArriendo">—</div>
+      <div class="kpi-sub">equipos disponibles todo el mes</div>
+    </div>
+  </div>
+
+  <!-- ─── Controls ───────────────────────────────────────────────── -->
+  <div class="controls">
+    <div class="controls-left">
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <div class="month-label" id="monthLabel"></div>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+      <button class="btn btn-sm" onclick="goToday()">Hoy</button>
+    </div>
+    <div class="controls-right">
+      <select class="filter-select" id="filterTipo" onchange="renderCalendar()">
+        <option value="">Todos los tipos</option>
+      </select>
+      <select class="filter-select" id="filterEstado" onchange="renderCalendar()">
+        <option value="">Todos los estados</option>
+        <option value="arrendado">🟢 Arrendado</option>
+        <option value="fuera_servicio">🔴 Fuera de Servicio</option>
+        <option value="mantencion">🟡 Mantención</option>
+        <option value="disponible">⚪ Disponible</option>
+        <option value="uso_interno">🔵 Uso Interno</option>
+        <option value="en_taller">🟣 En Taller</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ─── Legend ──────────────────────────────────────────────────── -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--st-arrendado)"></div>Arrendado</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--st-fuera-servicio)"></div>Fuera de Servicio</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--st-mantencion)"></div>Mantención</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--st-disponible)"></div>Disponible</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--st-uso-interno)"></div>Uso Interno</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--st-en-taller)"></div>En Taller</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; width:8px; height:8px; border-radius:50%;"></div>Con comentario</div>
+  </div>
+
+  <!-- ─── Calendar ───────────────────────────────────────────────── -->
+  <div class="calendar-container" id="calendarContainer">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">📋</div>
+      <h3>Sin equipos registrados</h3>
+      <p>Sincroniza la flota desde el Hub o agrega equipos manualmente desde Configuración.</p>
+      <button class="btn btn-primary" onclick="syncFromHub()">🔄 Sincronizar desde Hub</button>
+    </div>
+  </div>
+
+  <!-- ─── Config Panel ───────────────────────────────────────────── -->
+  <div class="config-panel" id="configPanel">
+    <h2>⚙️ Gestión de Equipos</h2>
+    <div style="display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">N° Interno</label>
+        <input class="modal-input" id="newEquipoId" placeholder="Ej: RSCS-01" style="margin-bottom:0; width:140px;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Tipo</label>
+        <input class="modal-input" id="newEquipoTipo" placeholder="Ej: Tolva" style="margin-bottom:0; width:140px;">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Patente</label>
+        <input class="modal-input" id="newEquipoPatente" placeholder="Ej: ABCD-12" style="margin-bottom:0; width:140px;">
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="addEquipo()" style="height:37px;">+ Agregar</button>
+    </div>
+    <div class="equipo-list" id="equipoList"></div>
+  </div>
+
+  <!-- ─── Cell Modal ─────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="cellModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="modalTitle"></h3>
+          <div class="modal-date" id="modalDate"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>Estado</label>
+        <div class="status-grid" id="statusGrid">
+          <button class="status-btn" data-status="arrendado" onclick="selectStatus('arrendado')">🟢 Arrendado</button>
+          <button class="status-btn" data-status="fuera_servicio" onclick="selectStatus('fuera_servicio')">🔴 Fuera Serv.</button>
+          <button class="status-btn" data-status="mantencion" onclick="selectStatus('mantencion')">🟡 Mantención</button>
+          <button class="status-btn" data-status="disponible" onclick="selectStatus('disponible')">⚪ Disponible</button>
+          <button class="status-btn" data-status="uso_interno" onclick="selectStatus('uso_interno')">🔵 Uso Interno</button>
+          <button class="status-btn" data-status="en_taller" onclick="selectStatus('en_taller')">🟣 En Taller</button>
+        </div>
+
+        <label>Cliente</label>
+        <input class="modal-input" id="modalCliente" placeholder="Nombre del cliente">
+
+        <label>N° Contrato</label>
+        <input class="modal-input" id="modalContrato" placeholder="CTR-2026-001">
+
+        <label>Comentario</label>
+        <textarea class="modal-input" id="modalComentario" placeholder="Notas del día..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveCell()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Sync Modal ─────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="syncModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Sincronizar desde Hub</h3>
+        <button class="modal-close" onclick="closeSyncModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="sync-status" id="syncStatus">
+          <div class="spinner"></div>
+          <p>Conectando con CyC Hub...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Toast ──────────────────────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ─── State ──────────────────────────────────────────────────
+    let currentYear, currentMonth;
+    let equipos = [];
+    let registros = {};   // { "RSCS-01|2026-06-05": { estado, cliente, contrato, comentario } }
+    let editingCell = null; // { equipo_id, fecha }
+    let selectedStatus = 'disponible';
+    let configVisible = false;
+
+    // Drag selection
+    let isDragging = false;
+    let dragEquipo = null;
+    let dragStartDay = null;
+    let dragDays = new Set();
+
+    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+    // ─── Init ───────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth() + 1;
+      loadAll();
+    });
+
+    async function loadAll() {
+      await loadEquipos();
+      await loadRegistros();
+      await loadStats();
+      renderCalendar();
+    }
+
+    // ─── API Calls ──────────────────────────────────────────────
+    async function loadEquipos() {
+      try {
+        const res = await fetch('/api/equipos');
+        equipos = await res.json();
+        populateFilterTipo();
+        renderEquipoList();
+      } catch (e) {
+        console.error('Error loading equipos:', e);
+      }
+    }
+
+    async function loadRegistros() {
+      try {
+        const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+        const res = await fetch(`/api/calendario?mes=${mes}`);
+        const data = await res.json();
+        registros = {};
+        for (const r of data) {
+          registros[`${r.equipo_id}|${r.fecha}`] = r;
+        }
+      } catch (e) {
+        console.error('Error loading registros:', e);
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+        const res = await fetch(`/api/stats?mes=${mes}`);
+        const s = await res.json();
+
+        document.getElementById('kpiUtilizacion').textContent = s.utilizacion + '%';
+        document.getElementById('kpiUtilSub').textContent = `${s.byEstado.arrendado || 0} de ${s.totalPossible} días-equipo`;
+        document.getElementById('kpiEquipos').textContent = s.totalEquipos;
+        document.getElementById('kpiEquiposSub').textContent = `${s.daysInMonth} días en el mes`;
+        document.getElementById('kpiFS').textContent = (s.byEstado.fuera_servicio || 0) + (s.byEstado.en_taller || 0);
+        document.getElementById('kpiFSSub').textContent = `${s.topFueraServicio.length} equipos afectados`;
+        document.getElementById('kpiSinArriendo').textContent = s.equiposSinArriendo;
+      } catch (e) {
+        console.error('Error loading stats:', e);
+      }
+    }
+
+    // ─── Render Calendar ────────────────────────────────────────
+    function renderCalendar() {
+      const container = document.getElementById('calendarContainer');
+      const empty = document.getElementById('emptyState');
+
+      const filterTipo = document.getElementById('filterTipo').value;
+      const filterEstado = document.getElementById('filterEstado').value;
+
+      let filtered = equipos;
+      if (filterTipo) {
+        filtered = filtered.filter(e => e.tipo === filterTipo);
+      }
+      if (filterEstado) {
+        filtered = filtered.filter(e => {
+          // Show equipos that have at least 1 day with the selected estado
+          const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+          const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${mes}-${String(d).padStart(2, '0')}`;
+            const key = `${e.equipo_id}|${dateStr}`;
+            if (registros[key]?.estado === filterEstado) return true;
+          }
+          return false;
+        });
+      }
+
+      // Update month label
+      document.getElementById('monthLabel').textContent = `${MESES[currentMonth - 1]} ${currentYear}`;
+
+      if (filtered.length === 0 && equipos.length === 0) {
+        empty.style.display = 'block';
+        const table = container.querySelector('.calendar-table');
+        if (table) table.remove();
+        return;
+      }
+
+      empty.style.display = 'none';
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+      let html = '<table class="calendar-table"><thead><tr><th class="th-equipo">Equipo</th>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(currentYear, currentMonth - 1, d);
+        const dow = date.getDay();
+        const isWeekend = dow === 0 || dow === 6;
+        html += `<th class="th-day${isWeekend ? ' weekend' : ''}">${d}<br><span style="font-size:9px;font-weight:400;opacity:0.6;">${DIAS_SEMANA[dow]}</span></th>`;
+      }
+      html += '</tr></thead><tbody>';
+
+      for (const eq of filtered) {
+        html += `<tr><td class="td-equipo"><div class="equipo-name">${eq.equipo_id}</div><div class="equipo-type">${eq.tipo || ''}</div></td>`;
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${mes}-${String(d).padStart(2, '0')}`;
+          const key = `${eq.equipo_id}|${dateStr}`;
+          const reg = registros[key];
+          const estado = reg?.estado || '';
+          const hasComment = reg?.comentario ? ' has-comment' : '';
+          const title = reg ? `${estado}${reg.cliente ? ' — ' + reg.cliente : ''}${reg.comentario ? '\n💬 ' + reg.comentario : ''}` : 'Sin registro';
+
+          html += `<td class="td-day">
+            <div class="day-cell${hasComment}"
+                 data-estado="${estado}"
+                 data-equipo="${eq.equipo_id}"
+                 data-fecha="${dateStr}"
+                 data-day="${d}"
+                 title="${title}"
+                 onclick="openCell('${eq.equipo_id}','${dateStr}')"
+                 onmousedown="startDrag(event, '${eq.equipo_id}', ${d})"
+                 onmouseenter="continueDrag(event, '${eq.equipo_id}', ${d})"
+                 onmouseup="endDrag(event)">
+            </div>
+          </td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      
+      const existingTable = container.querySelector('.calendar-table');
+      if (existingTable) existingTable.remove();
+      
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // ─── Drag Selection ─────────────────────────────────────────
+    function startDrag(e, equipoId, day) {
+      if (e.button !== 0) return; // left click only
+      e.preventDefault();
+      isDragging = true;
+      dragEquipo = equipoId;
+      dragStartDay = day;
+      dragDays = new Set([day]);
+      highlightDrag();
+    }
+
+    function continueDrag(e, equipoId, day) {
+      if (!isDragging || equipoId !== dragEquipo) return;
+      const minD = Math.min(dragStartDay, day);
+      const maxD = Math.max(dragStartDay, day);
+      dragDays = new Set();
+      for (let d = minD; d <= maxD; d++) dragDays.add(d);
+      highlightDrag();
+    }
+
+    function endDrag(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      if (dragDays.size > 1) {
+        openBatchModal();
+      }
+      clearDragHighlight();
+    }
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        if (dragDays.size > 1) {
+          openBatchModal();
+        }
+        clearDragHighlight();
+      }
+    });
+
+    function highlightDrag() {
+      clearDragHighlight();
+      document.querySelectorAll(`.day-cell[data-equipo="${dragEquipo}"]`).forEach(cell => {
+        const d = parseInt(cell.dataset.day);
+        if (dragDays.has(d)) cell.classList.add('drag-highlight');
+      });
+    }
+
+    function clearDragHighlight() {
+      document.querySelectorAll('.day-cell.drag-highlight').forEach(c => c.classList.remove('drag-highlight'));
+    }
+
+    function openBatchModal() {
+      const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+      const sortedDays = [...dragDays].sort((a, b) => a - b);
+      editingCell = {
+        equipo_id: dragEquipo,
+        fechas: sortedDays.map(d => `${mes}-${String(d).padStart(2, '0')}`),
+        isBatch: true
+      };
+
+      document.getElementById('modalTitle').textContent = dragEquipo;
+      document.getElementById('modalDate').textContent = `${sortedDays.length} días seleccionados (${sortedDays[0]} - ${sortedDays[sortedDays.length - 1]} ${MESES[currentMonth - 1]})`;
+
+      // Reset
+      selectedStatus = 'disponible';
+      document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.status-btn[data-status="disponible"]').classList.add('active');
+      document.getElementById('modalCliente').value = '';
+      document.getElementById('modalContrato').value = '';
+      document.getElementById('modalComentario').value = '';
+
+      document.getElementById('cellModal').classList.add('active');
+    }
+
+    // ─── Cell Modal ─────────────────────────────────────────────
+    function openCell(equipoId, fecha) {
+      if (isDragging) return;
+      editingCell = { equipo_id: equipoId, fecha, isBatch: false };
+
+      const key = `${equipoId}|${fecha}`;
+      const reg = registros[key];
+      const d = new Date(fecha + 'T12:00:00');
+
+      document.getElementById('modalTitle').textContent = equipoId;
+      document.getElementById('modalDate').textContent = `${d.getDate()} de ${MESES[d.getMonth()]} ${d.getFullYear()}`;
+
+      selectedStatus = reg?.estado || 'disponible';
+      document.querySelectorAll('.status-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.status === selectedStatus);
+      });
+
+      document.getElementById('modalCliente').value = reg?.cliente || '';
+      document.getElementById('modalContrato').value = reg?.contrato || '';
+      document.getElementById('modalComentario').value = reg?.comentario || '';
+
+      document.getElementById('cellModal').classList.add('active');
+    }
+
+    function selectStatus(status) {
+      selectedStatus = status;
+      document.querySelectorAll('.status-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.status === status);
+      });
+    }
+
+    function closeModal() {
+      document.getElementById('cellModal').classList.remove('active');
+      editingCell = null;
+    }
+
+    async function saveCell() {
+      if (!editingCell) return;
+
+      const payload = {
+        estado: selectedStatus,
+        cliente: document.getElementById('modalCliente').value.trim() || null,
+        contrato: document.getElementById('modalContrato').value.trim() || null,
+        comentario: document.getElementById('modalComentario').value.trim() || null,
+      };
+
+      try {
+        if (editingCell.isBatch) {
+          const res = await fetch('/api/calendario/batch', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              equipo_id: editingCell.equipo_id,
+              fechas: editingCell.fechas,
+              ...payload
+            })
+          });
+          if (!res.ok) throw new Error('Error batch');
+          toast(`✅ ${editingCell.fechas.length} días actualizados`, 'success');
+        } else {
+          const res = await fetch('/api/calendario', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ equipo_id: editingCell.equipo_id, fecha: editingCell.fecha, ...payload })
+          });
+          if (!res.ok) throw new Error('Error saving');
+          toast('✅ Registro guardado', 'success');
+        }
+
+        closeModal();
+        await loadRegistros();
+        await loadStats();
+        renderCalendar();
+      } catch (e) {
+        toast('❌ Error guardando: ' + e.message, 'error');
+      }
+    }
+
+    // ─── Month Navigation ───────────────────────────────────────
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+      if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
+      loadRegistros().then(() => {
+        loadStats();
+        renderCalendar();
+      });
+    }
+
+    function goToday() {
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth() + 1;
+      loadRegistros().then(() => {
+        loadStats();
+        renderCalendar();
+      });
+    }
+
+    // ─── Config / Equipos ───────────────────────────────────────
+    function toggleConfig() {
+      configVisible = !configVisible;
+      document.getElementById('configPanel').classList.toggle('active', configVisible);
+    }
+
+    function renderEquipoList() {
+      const el = document.getElementById('equipoList');
+      if (!equipos.length) {
+        el.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:20px;">No hay equipos. Sincroniza desde Hub o agrega manualmente.</p>';
+        return;
+      }
+      el.innerHTML = equipos.map(e => `
+        <div class="equipo-chip">
+          <div class="equipo-chip-info">
+            <div class="eq-id">${e.equipo_id}</div>
+            <div class="eq-tipo">${e.tipo || 'Sin tipo'} ${e.patente ? '· ' + e.patente : ''}</div>
+          </div>
+          <button class="delete-btn" onclick="deleteEquipo(${e.id})" title="Eliminar">×</button>
+        </div>
+      `).join('');
+    }
+
+    async function addEquipo() {
+      const id = document.getElementById('newEquipoId').value.trim();
+      const tipo = document.getElementById('newEquipoTipo').value.trim();
+      const patente = document.getElementById('newEquipoPatente').value.trim();
+      if (!id) return toast('⚠️ N° interno requerido', 'error');
+
+      try {
+        const res = await fetch('/api/equipos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ equipo_id: id, tipo: tipo || null, patente: patente || null })
+        });
+        if (!res.ok) throw new Error('Error');
+        document.getElementById('newEquipoId').value = '';
+        document.getElementById('newEquipoTipo').value = '';
+        document.getElementById('newEquipoPatente').value = '';
+        toast('✅ Equipo agregado', 'success');
+        await loadAll();
+      } catch (e) {
+        toast('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function deleteEquipo(id) {
+      if (!confirm('¿Eliminar este equipo del parque?')) return;
+      try {
+        await fetch(`/api/equipos/${id}`, { method: 'DELETE' });
+        toast('🗑️ Equipo eliminado', 'success');
+        await loadAll();
+      } catch (e) {
+        toast('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    // ─── Hub Sync ───────────────────────────────────────────────
+    async function syncFromHub() {
+      document.getElementById('syncModal').classList.add('active');
+      document.getElementById('syncStatus').innerHTML = '<div class="spinner"></div><p>Conectando con CyC Hub y sincronizando flota...</p>';
+
+      try {
+        const res = await fetch('/api/equipos/sync', { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Error de sincronización');
+
+        document.getElementById('syncStatus').innerHTML = `
+          <div style="font-size:40px;margin-bottom:12px;">✅</div>
+          <p style="font-weight:600;font-size:16px;margin-bottom:8px;">Sincronización exitosa</p>
+          <p style="color:var(--text-secondary);">${data.synced} equipos sincronizados</p>
+          ${data.contractsFilled ? `<p style="color:var(--text-secondary);">${data.contractsFilled} días-equipo pre-llenados desde contratos activos</p>` : ''}
+          <button class="btn btn-primary" style="margin-top:16px;" onclick="closeSyncModal(); loadAll();">Aceptar</button>
+        `;
+      } catch (e) {
+        document.getElementById('syncStatus').innerHTML = `
+          <div style="font-size:40px;margin-bottom:12px;">❌</div>
+          <p style="font-weight:600;font-size:16px;margin-bottom:8px;">Error de sincronización</p>
+          <p style="color:var(--st-fuera-servicio);">${e.message}</p>
+          <p style="color:var(--text-muted);font-size:12px;margin-top:8px;">Verifica que cyc-hub esté corriendo y accesible.</p>
+          <button class="btn" style="margin-top:16px;" onclick="closeSyncModal()">Cerrar</button>
+        `;
+      }
+    }
+
+    function closeSyncModal() {
+      document.getElementById('syncModal').classList.remove('active');
+    }
+
+    // ─── Helpers ────────────────────────────────────────────────
+    function populateFilterTipo() {
+      const tipos = [...new Set(equipos.map(e => e.tipo).filter(Boolean))].sort();
+      const sel = document.getElementById('filterTipo');
+      const current = sel.value;
+      sel.innerHTML = '<option value="">Todos los tipos</option>' +
+        tipos.map(t => `<option value="${t}"${t === current ? ' selected' : ''}>${t}</option>`).join('');
+    }
+
+    function toast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast ' + type;
+      setTimeout(() => el.classList.add('show'), 10);
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // Close modals on overlay click
+    document.getElementById('cellModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+    document.getElementById('syncModal').addEventListener('click', function(e) {
+      if (e.target === this) closeSyncModal();
+    });
+
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeModal(); closeSyncModal(); }
+    });
+  </script>
+</body>
+</html>
