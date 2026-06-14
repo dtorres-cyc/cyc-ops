@@ -50,28 +50,31 @@
       overflow-x: hidden;
     }
 
-    /* ─── Header ─────────────────────────────────────────────────── */
-    .header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 28px;
+    /* ─── Sidebar & Layout ────────────────────────────────────────── */
+    .app-container {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background: linear-gradient(180deg, #0f172a 0%, #0d1220 100%);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
       position: sticky;
       top: 0;
-      z-index: 100;
-      backdrop-filter: blur(12px);
+      height: 100vh;
+      flex-shrink: 0;
     }
 
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 16px;
+    .sidebar-header {
+      padding: 24px;
+      border-bottom: 1px solid rgba(42, 53, 80, 0.3);
     }
 
-    .header-logo {
-      font-size: 20px;
+    .sidebar-logo {
+      font-size: 22px;
       font-weight: 800;
       background: linear-gradient(135deg, #3b82f6, #8b5cf6);
       -webkit-background-clip: text;
@@ -79,18 +82,129 @@
       letter-spacing: -0.5px;
     }
 
-    .header-title {
-      font-size: 15px;
-      color: var(--text-secondary);
-      font-weight: 400;
+    .sidebar-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    .header-right {
+    .sidebar-menu {
+      flex: 1;
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .menu-item {
       display: flex;
       align-items: center;
-      gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid transparent;
+      background: none;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: var(--transition);
+      font-family: inherit;
     }
 
+    .menu-item:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-primary);
+    }
+
+    .menu-item.active {
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.2);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .menu-icon {
+      margin-right: 12px;
+      font-size: 16px;
+    }
+
+    .badge-menu {
+      margin-left: auto;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(42, 53, 80, 0.3);
+    }
+
+    .btn-sidebar {
+      width: 100%;
+      justify-content: center;
+      background: var(--bg-card);
+      border-color: var(--border);
+      color: var(--text-secondary);
+    }
+
+    .btn-sidebar:hover {
+      color: var(--text-primary);
+      background: var(--bg-card-hover);
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background: var(--bg-primary);
+      max-height: 100vh;
+    }
+
+    .content-header {
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    /* Tab Panels */
+    .tab-panel {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .tab-panel.active {
+      display: flex;
+    }
+
+    .tab-content-inner {
+      padding: 28px;
+      flex: 1;
+    }
+
+    /* ─── Buttons ────────────────────────────────────────────────── */
     .btn {
       padding: 8px 16px;
       border-radius: var(--radius-sm);
@@ -322,7 +436,7 @@
       letter-spacing: 0.5px;
       border-bottom: 1px solid var(--border);
       position: sticky;
-      top: 60px;
+      top: 0;
       z-index: 10;
     }
 
@@ -332,8 +446,11 @@
       min-width: 120px;
       position: sticky;
       left: 0;
-      z-index: 20;
+      top: 0;
+      z-index: 30;
       background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      box-shadow: 4px 0 8px -4px rgba(0,0,0,0.5);
     }
 
     .calendar-table thead th.th-day {
@@ -369,8 +486,9 @@
       position: sticky;
       left: 0;
       background: var(--bg-card);
-      z-index: 5;
+      z-index: 12;
       border-right: 1px solid var(--border);
+      box-shadow: 4px 0 8px -4px rgba(0,0,0,0.5);
       transition: var(--transition);
     }
 
@@ -666,18 +784,59 @@
     .toast.success { border-left: 3px solid var(--st-arrendado); }
     .toast.error   { border-left: 3px solid var(--st-fuera-servicio); }
 
-    /* ─── Config Panel ───────────────────────────────────────────── */
+    /* ─── Config Panel & Coming Soon ──────────────────────────────── */
     .config-panel {
-      display: none;
-      padding: 20px 28px;
+      padding: 0;
     }
-
-    .config-panel.active { display: block; }
-
-    .config-panel h2 {
-      font-size: 18px;
+    
+    .coming-soon-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 40px;
+      min-height: 70vh;
+    }
+    
+    .coming-soon-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      animation: slideUp 0.3s ease;
+    }
+    
+    .cs-icon {
+      font-size: 54px;
+      margin-bottom: 20px;
+    }
+    
+    .coming-soon-card h2 {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    
+    .cs-badge {
+      display: inline-block;
+      font-size: 11px;
       font-weight: 700;
-      margin-bottom: 16px;
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      padding: 4px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    
+    .cs-desc {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
     }
 
     .equipo-list {
@@ -744,109 +903,185 @@
 </head>
 <body>
 
-  <!-- ─── Header ─────────────────────────────────────────────────── -->
-  <header class="header">
-    <div class="header-left">
-      <div class="header-logo">CyC Ops</div>
-      <div class="header-title">Calendario Operacional de Flota</div>
-    </div>
-    <div class="header-right">
-      <button class="btn btn-sm" id="btnConfig" onclick="toggleConfig()">⚙️ Equipos</button>
-      <button class="btn btn-sm btn-primary" id="btnSync" onclick="syncFromHub()">🔄 Sincronizar Hub</button>
-      <a href="https://cyc-hub-production.up.railway.app" class="btn btn-sm">◀ Hub</a>
-    </div>
-  </header>
-
-  <!-- ─── KPI Bar ────────────────────────────────────────────────── -->
-  <div class="kpi-bar">
-    <div class="kpi-card">
-      <div class="kpi-label">Utilización del Mes</div>
-      <div class="kpi-value" id="kpiUtilizacion">—%</div>
-      <div class="kpi-sub" id="kpiUtilSub">días arrendados / total</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Equipos Activos</div>
-      <div class="kpi-value" id="kpiEquipos">—</div>
-      <div class="kpi-sub" id="kpiEquiposSub">en el parque</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Días Fuera de Servicio</div>
-      <div class="kpi-value" id="kpiFS">—</div>
-      <div class="kpi-sub" id="kpiFSSub">equipos con problemas</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Sin Arriendo</div>
-      <div class="kpi-value" id="kpiSinArriendo">—</div>
-      <div class="kpi-sub">equipos disponibles todo el mes</div>
-    </div>
-  </div>
-
-  <!-- ─── Controls ───────────────────────────────────────────────── -->
-  <div class="controls">
-    <div class="controls-left">
-      <div class="month-nav">
-        <button onclick="changeMonth(-1)">‹</button>
-        <div class="month-label" id="monthLabel"></div>
-        <button onclick="changeMonth(1)">›</button>
+  <div class="app-container">
+    <!-- ─── Sidebar ───────────────────────────────────────────────── -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">CyC Ops</div>
+        <div class="sidebar-sub">Gestión Operacional</div>
       </div>
-      <button class="btn btn-sm" onclick="goToday()">Hoy</button>
-    </div>
-    <div class="controls-right">
-      <select class="filter-select" id="filterTipo" onchange="renderCalendar()">
-        <option value="">Todos los tipos</option>
-      </select>
-      <select class="filter-select" id="filterEstado" onchange="renderCalendar()">
-        <option value="">Todos los estados</option>
-        <option value="arrendado">🟢 Arrendado</option>
-        <option value="fuera_servicio">🔴 Fuera de Servicio</option>
-        <option value="mantencion">🟡 Mantención</option>
-        <option value="disponible">⚪ Disponible</option>
-        <option value="uso_interno">🔵 Uso Interno</option>
-        <option value="en_taller">🟣 En Taller</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- ─── Legend ──────────────────────────────────────────────────── -->
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:var(--st-arrendado)"></div>Arrendado</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--st-fuera-servicio)"></div>Fuera de Servicio</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--st-mantencion)"></div>Mantención</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--st-disponible)"></div>Disponible</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--st-uso-interno)"></div>Uso Interno</div>
-    <div class="legend-item"><div class="legend-dot" style="background:var(--st-en-taller)"></div>En Taller</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; width:8px; height:8px; border-radius:50%;"></div>Con comentario</div>
-  </div>
-
-  <!-- ─── Calendar ───────────────────────────────────────────────── -->
-  <div class="calendar-container" id="calendarContainer">
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">📋</div>
-      <h3>Sin equipos registrados</h3>
-      <p>Sincroniza la flota desde el Hub o agrega equipos manualmente desde Configuración.</p>
-      <button class="btn btn-primary" onclick="syncFromHub()">🔄 Sincronizar desde Hub</button>
-    </div>
-  </div>
-
-  <!-- ─── Config Panel ───────────────────────────────────────────── -->
-  <div class="config-panel" id="configPanel">
-    <h2>⚙️ Gestión de Equipos</h2>
-    <div style="display:flex; gap:8px; align-items:end; flex-wrap:wrap;">
-      <div>
-        <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">N° Interno</label>
-        <input class="modal-input" id="newEquipoId" placeholder="Ej: RSCS-01" style="margin-bottom:0; width:140px;">
+      
+      <nav class="sidebar-menu">
+        <button class="menu-item active" data-tab="calendario" onclick="switchTab('calendario')">
+          <span class="menu-icon">🗓️</span> Calendario de Flota
+        </button>
+        <button class="menu-item" data-tab="mecanicos" onclick="switchTab('mecanicos')">
+          <span class="menu-icon">🔧</span> Cal. Mecánicos <span class="badge-menu">Soon</span>
+        </button>
+        <button class="menu-item" data-tab="ordenes" onclick="switchTab('ordenes')">
+          <span class="menu-icon">📝</span> Órdenes de Trabajo <span class="badge-menu">Soon</span>
+        </button>
+        <button class="menu-item" data-tab="equipos" onclick="switchTab('equipos')">
+          <span class="menu-icon">⚙️</span> Gestión de Equipos
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <a href="https://cyc-hub-production.up.railway.app" class="btn btn-sidebar">
+          <span>◀</span> Volver al Hub
+        </a>
       </div>
-      <div>
-        <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Tipo</label>
-        <input class="modal-input" id="newEquipoTipo" placeholder="Ej: Tolva" style="margin-bottom:0; width:140px;">
+    </aside>
+
+    <!-- ─── Main Content ──────────────────────────────────────────── -->
+    <main class="main-content">
+      
+      <!-- PANEL: CALENDARIO DE FLOTA -->
+      <div class="tab-panel active" id="panel-calendario">
+        <div class="content-header">
+          <h1 class="page-title">🗓️ Calendario Operacional de Flota</h1>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-sm btn-primary" id="btnSync" onclick="syncFromHub()">🔄 Sincronizar Hub</button>
+          </div>
+        </div>
+        
+        <!-- KPI Bar -->
+        <div class="kpi-bar">
+          <div class="kpi-card">
+            <div class="kpi-label">Utilización del Mes</div>
+            <div class="kpi-value" id="kpiUtilizacion">—%</div>
+            <div class="kpi-sub" id="kpiUtilSub">días arrendados / total</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Equipos Activos</div>
+            <div class="kpi-value" id="kpiEquipos">—</div>
+            <div class="kpi-sub" id="kpiEquiposSub">en el parque</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Días Fuera de Servicio</div>
+            <div class="kpi-value" id="kpiFS">—</div>
+            <div class="kpi-sub" id="kpiFSSub">equipos con problemas</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Sin Arriendo</div>
+            <div class="kpi-value" id="kpiSinArriendo">—</div>
+            <div class="kpi-sub">equipos disponibles todo el mes</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+          <div class="controls-left">
+            <div class="month-nav">
+              <button onclick="changeMonth(-1)">‹</button>
+              <div class="month-label" id="monthLabel"></div>
+              <button onclick="changeMonth(1)">›</button>
+            </div>
+            <button class="btn btn-sm" onclick="goToday()">Hoy</button>
+          </div>
+          <div class="controls-right">
+            <select class="filter-select" id="filterTipo" onchange="renderCalendar()">
+              <option value="">Todos los tipos</option>
+            </select>
+            <select class="filter-select" id="filterEstado" onchange="renderCalendar()">
+              <option value="">Todos los estados</option>
+              <option value="arrendado">🟢 Arrendado</option>
+              <option value="fuera_servicio">🔴 Fuera de Servicio</option>
+              <option value="mantencion">🟡 Mantención</option>
+              <option value="disponible">⚪ Disponible</option>
+              <option value="uso_interno">🔵 Uso Interno</option>
+              <option value="en_taller">🟣 En Taller</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--st-arrendado)"></div>Arrendado</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--st-fuera-servicio)"></div>Fuera de Servicio</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--st-mantencion)"></div>Mantención</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--st-disponible)"></div>Disponible</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--st-uso-interno)"></div>Uso Interno</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--st-en-taller)"></div>En Taller</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; width:8px; height:8px; border-radius:50%;"></div>Con comentario</div>
+        </div>
+
+        <!-- Calendar Container -->
+        <div class="calendar-container" id="calendarContainer">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon">📋</div>
+            <h3>Sin equipos registrados</h3>
+            <p>Sincroniza la flota desde el Hub o agrega equipos manualmente desde Configuración.</p>
+            <button class="btn btn-primary" onclick="syncFromHub()">🔄 Sincronizar desde Hub</button>
+          </div>
+        </div>
       </div>
-      <div>
-        <label style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Patente</label>
-        <input class="modal-input" id="newEquipoPatente" placeholder="Ej: ABCD-12" style="margin-bottom:0; width:140px;">
+
+      <!-- PANEL: CALENDARIO DE MECÁNICOS -->
+      <div class="tab-panel" id="panel-mecanicos">
+        <div class="content-header">
+          <h1 class="page-title">🔧 Calendario de Mecánicos</h1>
+        </div>
+        <div class="coming-soon-panel">
+          <div class="coming-soon-card">
+            <div class="cs-icon">🔧</div>
+            <h2>Calendario de Mecánicos</h2>
+            <p class="cs-badge">Próximamente</p>
+            <p class="cs-desc">
+              Este módulo permitirá gestionar la planificación de turnos de los mecánicos, asignación de tareas de mantenimiento en faena y control de horas extras y disponibilidad en taller.
+            </p>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="addEquipo()" style="height:37px;">+ Agregar</button>
-    </div>
-    <div class="equipo-list" id="equipoList"></div>
+
+      <!-- PANEL: ÓRDENES DE TRABAJO -->
+      <div class="tab-panel" id="panel-ordenes">
+        <div class="content-header">
+          <h1 class="page-title">📝 Órdenes de Trabajo</h1>
+        </div>
+        <div class="coming-soon-panel">
+          <div class="coming-soon-card">
+            <div class="cs-icon">📝</div>
+            <h2>Órdenes de Trabajo</h2>
+            <p class="cs-badge">Próximamente</p>
+            <p class="cs-desc">
+              Este módulo permitirá emitir, asignar y registrar el avance de órdenes de mantención correctiva y preventiva, asociando repuestos, mecánicos responsables y horas de detención de equipos.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: GESTIÓN DE EQUIPOS -->
+      <div class="tab-panel" id="panel-equipos">
+        <div class="content-header">
+          <h1 class="page-title">⚙️ Gestión de Equipos del Parque</h1>
+        </div>
+        <div class="tab-content-inner">
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:28px; box-shadow:var(--shadow);">
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">Agregar Nuevo Equipo</h3>
+            <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
+              <div>
+                <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">N° Interno</label>
+                <input class="modal-input" id="newEquipoId" placeholder="Ej: RSCS-01" style="margin-bottom:0; width:160px;">
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Tipo</label>
+                <input class="modal-input" id="newEquipoTipo" placeholder="Ej: Tolva" style="margin-bottom:0; width:160px;">
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Patente</label>
+                <input class="modal-input" id="newEquipoPatente" placeholder="Ej: ABCD-12" style="margin-bottom:0; width:160px;">
+              </div>
+              <button class="btn btn-primary" onclick="addEquipo()" style="height:37px;">+ Agregar Equipo</button>
+            </div>
+          </div>
+          
+          <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">Equipos Registrados</h3>
+          <div class="equipo-list" id="equipoList"></div>
+        </div>
+      </div>
+
+    </main>
   </div>
 
   <!-- ─── Cell Modal ─────────────────────────────────────────────── -->
@@ -912,7 +1147,7 @@
     let registros = {};   // { "RSCS-01|2026-06-05": { estado, cliente, contrato, comentario } }
     let editingCell = null; // { equipo_id, fecha }
     let selectedStatus = 'disponible';
-    let configVisible = false;
+    let activeTab = 'calendario';
 
     // Drag selection
     let isDragging = false;
@@ -928,8 +1163,29 @@
       const now = new Date();
       currentYear = now.getFullYear();
       currentMonth = now.getMonth() + 1;
-      loadAll();
+      switchTab('calendario');
     });
+
+    function switchTab(tabId) {
+      activeTab = tabId;
+      
+      // Hide all panels and show selected
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      const targetPanel = document.getElementById('panel-' + tabId);
+      if (targetPanel) targetPanel.classList.add('active');
+
+      // Update menu buttons
+      document.querySelectorAll('.menu-item').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === tabId);
+      });
+
+      // Load data accordingly
+      if (tabId === 'calendario') {
+        loadAll();
+      } else if (tabId === 'equipos') {
+        loadEquipos();
+      }
+    }
 
     async function loadAll() {
       await loadEquipos();
@@ -1239,10 +1495,7 @@
     }
 
     // ─── Config / Equipos ───────────────────────────────────────
-    function toggleConfig() {
-      configVisible = !configVisible;
-      document.getElementById('configPanel').classList.toggle('active', configVisible);
-    }
+    // toggleConfig is deprecated in favor of tab switching
 
     function renderEquipoList() {
       const el = document.getElementById('equipoList');
