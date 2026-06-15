@@ -6,6 +6,7 @@
   <title>CyC Ops — Calendario Operacional de Flota</title>
   <meta name="description" content="Calendario operacional de flota de equipos — Transportes CyC Limitada">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --bg-primary: #f4f6f9;
@@ -427,8 +428,25 @@
     /* ─── Calendar Grid ─────────────────────────────────────────── */
     .calendar-container {
       padding: 0 28px 28px;
-      overflow-x: auto;
+      overflow: auto;
+      max-height: 68vh;
     }
+
+    /* Destacado de hoy en calendario */
+    .calendar-table th.today {
+      background: rgba(232, 101, 26, 0.12) !important;
+      color: var(--accent) !important;
+      border-bottom: 2px solid var(--accent) !important;
+      font-weight: 700;
+    }
+    .calendar-table td.today-col {
+      background: rgba(232, 101, 26, 0.035) !important;
+    }
+    .day-cell.today-cell {
+      outline: 2px solid var(--accent) !important;
+      outline-offset: 1px;
+    }
+
 
     .calendar-table {
       width: 100%;
@@ -949,6 +967,9 @@
         <button class="menu-item active" data-tab="calendario" onclick="switchTab('calendario')">
           <span class="menu-icon">🗓️</span> Calendario de Flota
         </button>
+        <button class="menu-item" data-tab="dashboard" onclick="switchTab('dashboard')">
+          <span class="menu-icon">📊</span> Dashboard de Operación
+        </button>
         <button class="menu-item" data-tab="inspecciones" onclick="switchTab('inspecciones')">
           <span class="menu-icon">📋</span> Inspección de Equipos
         </button>
@@ -1051,6 +1072,117 @@
             <p>Sincroniza la flota desde el Hub o agrega equipos manualmente desde Configuración.</p>
             <button class="btn btn-primary" onclick="syncFromHub()">🔄 Sincronizar desde Hub</button>
           </div>
+        </div>
+      </div>
+
+      <!-- PANEL: DASHBOARD DE OPERACIÓN -->
+      <div class="tab-panel" id="panel-dashboard">
+        <div class="content-header">
+          <h1 class="page-title">📊 Dashboard de Operación y Flota</h1>
+          <div style="display:flex; gap:8px;">
+            <div class="month-nav" style="margin-bottom:0;">
+              <button onclick="changeMonthDashboard(-1)">‹</button>
+              <div class="month-label" id="monthLabelDashboard"></div>
+              <button onclick="changeMonthDashboard(1)">›</button>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="loadDashboardData()">🔄 Refrescar</button>
+          </div>
+        </div>
+        
+        <div class="tab-content-inner" style="display:flex; flex-direction:column; gap:24px; overflow-y:auto;">
+          <!-- KPI Summary Cards -->
+          <div class="kpi-bar" style="padding:0; border:none; background:none; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:14px;">
+            <div class="kpi-card">
+              <div class="kpi-label">Utilización de Flota</div>
+              <div class="kpi-value" id="dbKpiUtilizacion">—%</div>
+              <div class="kpi-sub" id="dbKpiUtilSub">días arrendados / total</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Parque Total</div>
+              <div class="kpi-value" id="dbKpiEquipos">—</div>
+              <div class="kpi-sub" id="dbKpiEquiposSub">equipos activos</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Disponibilidad Actual</div>
+              <div class="kpi-value" id="dbKpiDisponibles">—</div>
+              <div class="kpi-sub">equipos listos para arriendo</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">En Mantención / Taller</div>
+              <div class="kpi-value" id="dbKpiMantenciones">—</div>
+              <div class="kpi-sub" id="dbKpiMantencionesSub">días fuera de servicio</div>
+            </div>
+          </div>
+          
+          <!-- Charts Section -->
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:24px;">
+            <!-- Chart 1: Utilización Diaria -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">📈 Tendencia de Utilización Diaria</h3>
+              <div style="height:250px; position:relative;">
+                <canvas id="chartUtilizacionDiaria"></canvas>
+              </div>
+            </div>
+            <!-- Chart 2: Estado de Flota -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">🍕 Distribución de Estados</h3>
+              <div style="height:250px; position:relative; display:flex; justify-content:center; align-items:center;">
+                <canvas id="chartEstadoFlota"></canvas>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:24px;">
+            <!-- Left: Top Clientes -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">🏢 Días de Arriendo por Cliente</h3>
+              <div style="height:250px; position:relative;">
+                <canvas id="chartClientesArriendo"></canvas>
+              </div>
+            </div>
+            <!-- Right: Detenciones / Fuera de servicio details -->
+            <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); display:flex; flex-direction:column;">
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">⚠️ Detalle de Equipos Fuera de Servicio / En Taller</h3>
+              <div style="flex:1; overflow-y:auto; max-height:250px;">
+                <table class="calendar-table" style="width:100%; min-width:unset; font-size:12px; border-collapse:collapse;">
+                  <thead>
+                    <tr>
+                      <th style="padding:8px 10px; text-align:left; background:var(--bg-secondary); border-bottom:1px solid var(--border); font-size:11px; font-weight:600; text-transform:uppercase;">Equipo</th>
+                      <th style="padding:8px 10px; text-align:center; width:80px; background:var(--bg-secondary); border-bottom:1px solid var(--border); font-size:11px; font-weight:600; text-transform:uppercase;">Días FS</th>
+                      <th style="padding:8px 10px; text-align:left; background:var(--bg-secondary); border-bottom:1px solid var(--border); font-size:11px; font-weight:600; text-transform:uppercase;">Motivos / Comentarios</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dbDowntimeTableBody">
+                    <!-- dynamic -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom: Resumen Operacional de Mecánicos en el mes -->
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
+            <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">🔧 Cobertura y Despliegue de Mecánicos por Ubicación</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
+              <div style="height:220px; position:relative;">
+                <canvas id="chartMecanicosUbicaciones"></canvas>
+              </div>
+              <div style="overflow-y:auto; max-height:220px;">
+                <table class="calendar-table" style="width:100%; min-width:unset; font-size:12px; border-collapse:collapse;">
+                  <thead>
+                    <tr>
+                      <th style="padding:8px 10px; text-align:left; background:var(--bg-secondary); border-bottom:1px solid var(--border); font-size:11px; font-weight:600; text-transform:uppercase;">Ubicación</th>
+                      <th style="padding:8px 10px; text-align:center; background:var(--bg-secondary); border-bottom:1px solid var(--border); font-size:11px; font-weight:600; text-transform:uppercase;">Mecánicos Trabajando (Días)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dbMecTableBody">
+                    <!-- dynamic -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
         </div>
       </div>
 
@@ -1278,10 +1410,14 @@
         </div>
 
         <label>Cliente</label>
-        <input class="modal-input" id="modalCliente" placeholder="Nombre del cliente">
+        <input class="modal-input" id="modalCliente" placeholder="Nombre del cliente" list="clientesList" oninput="onClienteChange()">
+        <datalist id="clientesList"></datalist>
 
         <label>N° Contrato</label>
-        <input class="modal-input" id="modalContrato" placeholder="CTR-2026-001">
+        <select class="modal-input" id="modalContrato" onchange="onContratoSelectChange()">
+          <option value="">-- Seleccionar contrato --</option>
+        </select>
+        <input class="modal-input" id="modalContratoManual" placeholder="Escribe el contrato (Ej: CTR-2026-001)" style="display:none; margin-top:8px;">
 
         <label>Comentario</label>
         <textarea class="modal-input" id="modalComentario" placeholder="Notas del día..."></textarea>
@@ -1369,6 +1505,14 @@
     let dragMecanico = null;
     let dragStartDayMec = null;
     let dragDaysMec = new Set();
+
+    // Contracts & Dashboard State
+    let contratosHub = [];
+    let currentYearDashboard, currentMonthDashboard;
+    let chartUtilizacionDiariaInstance = null;
+    let chartEstadoFlotaInstance = null;
+    let chartClientesArriendoInstance = null;
+    let chartMecanicosUbicacionesInstance = null;
     
     let config = {
       cycHubUrl: 'https://cyc-hub-production.up.railway.app',
@@ -1392,9 +1536,13 @@
       
       currentYearMec = now.getFullYear();
       currentMonthMec = now.getMonth() + 1;
+
+      currentYearDashboard = now.getFullYear();
+      currentMonthDashboard = now.getMonth() + 1;
       
       loadConfig().then(() => {
         switchTab('calendario');
+        fetchContratosHub();
       });
     });
 
@@ -1428,6 +1576,8 @@
       // Load data accordingly
       if (tabId === 'calendario') {
         loadAll();
+      } else if (tabId === 'dashboard') {
+        loadDashboardData();
       } else if (tabId === 'mecanicos') {
         loadAllMec();
       } else if (tabId === 'equipos') {
@@ -1532,13 +1682,18 @@
       empty.style.display = 'none';
       const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
       const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+      
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === currentYear && (today.getMonth() + 1) === currentMonth;
+      const todayDay = today.getDate();
 
       let html = '<table class="calendar-table"><thead><tr><th class="th-equipo">Equipo</th>';
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(currentYear, currentMonth - 1, d);
         const dow = date.getDay();
         const isWeekend = dow === 0 || dow === 6;
-        html += `<th class="th-day${isWeekend ? ' weekend' : ''}">${d}<br><span style="font-size:9px;font-weight:400;opacity:0.6;">${DIAS_SEMANA[dow]}</span></th>`;
+        const isToday = isCurrentMonth && d === todayDay;
+        html += `<th class="th-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}">${d}<br><span style="font-size:9px;font-weight:400;opacity:0.6;">${DIAS_SEMANA[dow]}</span></th>`;
       }
       html += '</tr></thead><tbody>';
 
@@ -1551,9 +1706,10 @@
           const estado = reg?.estado || '';
           const hasComment = reg?.comentario ? ' has-comment' : '';
           const title = reg ? `${estado}${reg.cliente ? ' — ' + reg.cliente : ''}${reg.comentario ? '\n💬 ' + reg.comentario : ''}` : 'Sin registro';
+          const isToday = isCurrentMonth && d === todayDay;
 
-          html += `<td class="td-day">
-            <div class="day-cell${hasComment}"
+          html += `<td class="td-day${isToday ? ' today-col' : ''}">
+            <div class="day-cell${hasComment}${isToday ? ' today-cell' : ''}"
                  data-estado="${estado}"
                  data-equipo="${eq.equipo_id}"
                  data-fecha="${dateStr}"
@@ -1627,6 +1783,68 @@
       document.querySelectorAll('.day-cell.drag-highlight').forEach(c => c.classList.remove('drag-highlight'));
     }
 
+    // ─── Contracts Hub Helpers ──────────────────────────────────
+    async function fetchContratosHub() {
+      try {
+        const res = await fetch('/api/contratos');
+        if (res.ok) {
+          contratosHub = await res.json();
+          populateClientesDatalist();
+        }
+      } catch (e) {
+        console.error('Error fetching contracts from Hub:', e);
+      }
+    }
+
+    function populateClientesDatalist() {
+      const dl = document.getElementById('clientesList');
+      if (!dl) return;
+      const clientes = [...new Set(contratosHub.map(c => c.cliente).filter(Boolean))].sort();
+      dl.innerHTML = clientes.map(cl => `<option value="${cl}">`).join('');
+    }
+
+    function onClienteChange() {
+      const clientVal = document.getElementById('modalCliente').value.trim();
+      const select = document.getElementById('modalContrato');
+      if (!select) return;
+
+      select.innerHTML = '<option value="">-- Seleccionar contrato --</option>';
+
+      if (!clientVal) {
+        select.innerHTML = '<option value="">-- Ingresa un cliente primero --</option>';
+        document.getElementById('modalContratoManual').style.display = 'none';
+        return;
+      }
+
+      // Filter contracts for this client
+      const filtered = contratosHub.filter(c => c.cliente && c.cliente.toLowerCase() === clientVal.toLowerCase());
+      
+      if (filtered.length === 0) {
+        select.innerHTML = `
+          <option value="">-- Sin contratos registrados --</option>
+          <option value="__manual__">✍️ Escribir contrato manualmente...</option>
+        `;
+      } else {
+        filtered.forEach(c => {
+          select.insertAdjacentHTML('beforeend', `<option value="${c.numeroContrato}">${c.numeroContrato} (${c.activo ? 'Activo' : 'Cerrado'})</option>`);
+        });
+        select.insertAdjacentHTML('beforeend', '<option value="__manual__">✍️ Escribir contrato manualmente...</option>');
+      }
+      onContratoSelectChange();
+    }
+
+    function onContratoSelectChange() {
+      const select = document.getElementById('modalContrato');
+      const manualInput = document.getElementById('modalContratoManual');
+      if (!select || !manualInput) return;
+
+      if (select.value === '__manual__') {
+        manualInput.style.display = 'block';
+      } else {
+        manualInput.style.display = 'none';
+      }
+    }
+
     function openBatchModal() {
       const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
       const sortedDays = [...dragDays].sort((a, b) => a - b);
@@ -1643,8 +1861,13 @@
       selectedStatus = 'disponible';
       document.querySelectorAll('.status-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.status-btn[data-status="disponible"]').classList.add('active');
+      
       document.getElementById('modalCliente').value = '';
+      onClienteChange();
       document.getElementById('modalContrato').value = '';
+      document.getElementById('modalContratoManual').value = '';
+      document.getElementById('modalContratoManual').style.display = 'none';
+      
       document.getElementById('modalComentario').value = '';
 
       document.getElementById('cellModal').classList.add('active');
@@ -1667,8 +1890,31 @@
         b.classList.toggle('active', b.dataset.status === selectedStatus);
       });
 
-      document.getElementById('modalCliente').value = reg?.cliente || '';
-      document.getElementById('modalContrato').value = reg?.contrato || '';
+      const clientVal = reg?.cliente || '';
+      const contratoVal = reg?.contrato || '';
+
+      document.getElementById('modalCliente').value = clientVal;
+      onClienteChange();
+
+      const select = document.getElementById('modalContrato');
+      const manualInput = document.getElementById('modalContratoManual');
+
+      if (contratoVal) {
+        const optionExists = Array.from(select.options).some(opt => opt.value === contratoVal);
+        if (optionExists) {
+          select.value = contratoVal;
+          manualInput.style.display = 'none';
+        } else {
+          select.value = '__manual__';
+          manualInput.style.display = 'block';
+          manualInput.value = contratoVal;
+        }
+      } else {
+        select.value = '';
+        manualInput.style.display = 'none';
+        manualInput.value = '';
+      }
+
       document.getElementById('modalComentario').value = reg?.comentario || '';
 
       document.getElementById('cellModal').classList.add('active');
@@ -1689,10 +1935,19 @@
     async function saveCell() {
       if (!editingCell) return;
 
+      const select = document.getElementById('modalContrato');
+      const manualInput = document.getElementById('modalContratoManual');
+      let contratoVal = null;
+      if (select && select.value === '__manual__') {
+        contratoVal = manualInput.value.trim() || null;
+      } else if (select) {
+        contratoVal = select.value.trim() || null;
+      }
+
       const payload = {
         estado: selectedStatus,
         cliente: document.getElementById('modalCliente').value.trim() || null,
-        contrato: document.getElementById('modalContrato').value.trim() || null,
+        contrato: contratoVal,
         comentario: document.getElementById('modalComentario').value.trim() || null,
       };
 
@@ -2000,12 +2255,17 @@
       const daysInMonth = new Date(currentYearMec, currentMonthMec, 0).getDate();
       const mes = `${currentYearMec}-${String(currentMonthMec).padStart(2, '0')}`;
 
+      const today = new Date();
+      const isCurrentMonth = today.getFullYear() === currentYearMec && (today.getMonth() + 1) === currentMonthMec;
+      const todayDay = today.getDate();
+
       let html = '<table class="calendar-table"><thead><tr><th class="th-equipo">Mecánico</th>';
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(currentYearMec, currentMonthMec - 1, d);
         const dow = date.getDay();
         const isWeekend = dow === 0 || dow === 6;
-        html += `<th class="th-day${isWeekend ? ' weekend' : ''}">${d}<br><span style="font-size:9px;font-weight:400;opacity:0.6;">${DIAS_SEMANA[dow]}</span></th>`;
+        const isToday = isCurrentMonth && d === todayDay;
+        html += `<th class="th-day${isWeekend ? ' weekend' : ''}${isToday ? ' today' : ''}">${d}<br><span style="font-size:9px;font-weight:400;opacity:0.6;">${DIAS_SEMANA[dow]}</span></th>`;
       }
       html += '</tr></thead><tbody>';
 
@@ -2024,9 +2284,10 @@
           }
 
           const title = reg ? `${estado.toUpperCase()}${reg.ubicacion ? ' @ ' + reg.ubicacion : ''}${reg.comentario ? '\n💬 ' + reg.comentario : ''}` : 'Sin registro (Descanso)';
+          const isToday = isCurrentMonth && d === todayDay;
 
-          html += `<td class="td-day">
-            <div class="day-cell${hasComment}"
+          html += `<td class="td-day${isToday ? ' today-col' : ''}">
+            <div class="day-cell${hasComment}${isToday ? ' today-cell' : ''}"
                  data-estado="${estado}"
                  data-mecanico="${mec.id}"
                  data-fecha="${dateStr}"
@@ -2342,6 +2603,304 @@
       } catch (e) {
         toast('❌ Error: ' + e.message, 'error');
       }
+    }
+
+    // ─── Dashboard Logic ─────────────────────────────────────────
+    
+    function changeMonthDashboard(delta) {
+      currentMonthDashboard += delta;
+      if (currentMonthDashboard > 12) { currentMonthDashboard = 1; currentYearDashboard++; }
+      if (currentMonthDashboard < 1)  { currentMonthDashboard = 12; currentYearDashboard--; }
+      loadDashboardData();
+    }
+
+    async function loadDashboardData() {
+      // Update label
+      document.getElementById('monthLabelDashboard').textContent = `${MESES[currentMonthDashboard - 1]} ${currentYearDashboard}`;
+      
+      const mesStr = `${currentYearDashboard}-${String(currentMonthDashboard).padStart(2, '0')}`;
+      
+      try {
+        const res = await fetch(`/api/stats/dashboard?mes=${mesStr}`);
+        if (!res.ok) throw new Error('Error loading dashboard stats');
+        const data = await res.json();
+        
+        // 1. Update KPIs
+        document.getElementById('dbKpiUtilizacion').textContent = data.utilizacion + '%';
+        document.getElementById('dbKpiUtilSub').textContent = `${data.byEstado?.arrendado || 0} de ${data.totalPossible || 0} días-equipo`;
+        
+        document.getElementById('dbKpiEquipos').textContent = data.totalEquipos;
+        document.getElementById('dbKpiEquiposSub').textContent = `${data.daysInMonth} días en el mes`;
+        
+        document.getElementById('dbKpiDisponibles').textContent = data.byEstado?.disponible || 0;
+        
+        const fsDays = (data.byEstado?.fuera_servicio || 0) + (data.byEstado?.en_taller || 0);
+        document.getElementById('dbKpiMantenciones').textContent = fsDays;
+        document.getElementById('dbKpiMantencionesSub').textContent = `${data.detenciones?.length || 0} equipos afectados`;
+        
+        // 2. Render Charts
+        renderUtilizacionDiariaChart(data);
+        renderEstadoFlotaChart(data.byEstado);
+        renderClientesArriendoChart(data.clientesArriendo);
+        renderMecanicosUbicacionesChart(data.mecanicosUbicaciones);
+        
+        // 3. Populate Downtime Table
+        populateDowntimeTable(data.detenciones);
+        
+        // 4. Populate Mechanics Location Table
+        populateMecTable(data.mecanicosUbicaciones);
+        
+      } catch (e) {
+        console.error(e);
+        toast('❌ Error cargando dashboard: ' + e.message, 'error');
+      }
+    }
+
+    function renderUtilizacionDiariaChart(data) {
+      const ctx = document.getElementById('chartUtilizacionDiaria').getContext('2d');
+      
+      const labels = [];
+      const dataPoints = [];
+      
+      for (let d = 1; d <= data.daysInMonth; d++) {
+        const dayStr = String(d).padStart(2, '0');
+        labels.push(dayStr);
+        
+        const dayRecord = data.dailyRentals.find(r => r.dia === dayStr);
+        dataPoints.push(dayRecord ? dayRecord.cnt : 0);
+      }
+      
+      if (chartUtilizacionDiariaInstance) {
+        chartUtilizacionDiariaInstance.destroy();
+      }
+      
+      chartUtilizacionDiariaInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Equipos Arrendados',
+            data: dataPoints,
+            borderColor: '#e8651a',
+            backgroundColor: 'rgba(232, 101, 26, 0.05)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#e8651a',
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: Math.max(data.totalEquipos, 5),
+              ticks: { stepSize: 1, color: '#94a3b8' },
+              grid: { color: '#f1f5f9' }
+            },
+            x: {
+              ticks: { color: '#94a3b8' },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function renderEstadoFlotaChart(byEstado) {
+      const ctx = document.getElementById('chartEstadoFlota').getContext('2d');
+      
+      const labels = ['Arrendado', 'Disponible', 'Mantención', 'Fuera Servicio', 'Uso Interno', 'En Taller'];
+      const dataPoints = [
+        byEstado.arrendado || 0,
+        byEstado.disponible || 0,
+        byEstado.mantencion || 0,
+        byEstado.fuera_servicio || 0,
+        byEstado.uso_interno || 0,
+        byEstado.en_taller || 0
+      ];
+      
+      const colors = [
+        '#22c55e', // arrendado
+        '#64748b', // disponible
+        '#d97706', // mantencion
+        '#ef4444', // fuera_servicio
+        '#e8651a', // uso_interno
+        '#a855f7'  // en_taller
+      ];
+      
+      if (chartEstadoFlotaInstance) {
+        chartEstadoFlotaInstance.destroy();
+      }
+      
+      const total = dataPoints.reduce((a, b) => a + b, 0);
+      if (total === 0) {
+        ctx.clearRect(0, 0, 250, 250);
+        return;
+      }
+      
+      chartEstadoFlotaInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: dataPoints,
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                boxWidth: 12,
+                font: { size: 11 },
+                color: '#475569'
+              }
+            }
+          },
+          cutout: '65%'
+        }
+      });
+    }
+
+    function renderClientesArriendoChart(clientesArriendo) {
+      const ctx = document.getElementById('chartClientesArriendo').getContext('2d');
+      
+      if (chartClientesArriendoInstance) {
+        chartClientesArriendoInstance.destroy();
+      }
+      
+      const labels = clientesArriendo.slice(0, 7).map(c => c.cliente);
+      const dataPoints = clientesArriendo.slice(0, 7).map(c => c.cnt);
+      
+      chartClientesArriendoInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: dataPoints,
+            backgroundColor: '#3b82f6',
+            borderRadius: 5,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: { color: '#94a3b8' },
+              grid: { color: '#f1f5f9' }
+            },
+            y: {
+              ticks: { color: '#475569', font: { size: 10 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function renderMecanicosUbicacionesChart(mecanicosUbicaciones) {
+      const ctx = document.getElementById('chartMecanicosUbicaciones').getContext('2d');
+      
+      if (chartMecanicosUbicacionesInstance) {
+        chartMecanicosUbicacionesInstance.destroy();
+      }
+      
+      const labels = mecanicosUbicaciones.map(u => u.ubicacion);
+      const dataPoints = mecanicosUbicaciones.map(u => u.cnt);
+      
+      chartMecanicosUbicacionesInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: dataPoints,
+            backgroundColor: '#10b981',
+            borderRadius: 5,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#94a3b8', stepSize: 1 },
+              grid: { color: '#f1f5f9' }
+            },
+            x: {
+              ticks: { color: '#475569', font: { size: 10 } },
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function populateDowntimeTable(detenciones) {
+      const tbody = document.getElementById('dbDowntimeTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      if (!detenciones || detenciones.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:var(--text-muted);">Sin detenciones reportadas en este mes.</td></tr>';
+        return;
+      }
+      
+      detenciones.forEach(d => {
+        let comms = d.comentarios || 'Sin comentarios';
+        if (comms.length > 80) comms = comms.substring(0, 77) + '...';
+        
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td style="padding:10px; font-weight:600;">${d.equipo_id}</td>
+            <td style="padding:10px; text-align:center; font-weight:700; color:var(--st-fuera-servicio);">${d.dias}d</td>
+            <td style="padding:10px; color:var(--text-secondary); text-align:left;" title="${d.comentarios}">${comms}</td>
+          </tr>
+        `);
+      });
+    }
+
+    function populateMecTable(mecanicosUbicaciones) {
+      const tbody = document.getElementById('dbMecTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '';
+      if (!mecanicosUbicaciones || mecanicosUbicaciones.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px; color:var(--text-muted);">Sin despliegue registrado.</td></tr>';
+        return;
+      }
+      
+      mecanicosUbicaciones.forEach(u => {
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td style="padding:10px; font-weight:600;">📍 ${u.ubicacion}</td>
+            <td style="padding:10px; text-align:center; font-weight:700; color:#10b981;">${u.cnt} de trabajo (días)</td>
+          </tr>
+        `);
+      });
     }
 
     function showToast(msg, type = 'success') {

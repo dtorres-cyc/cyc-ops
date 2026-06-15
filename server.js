@@ -317,6 +317,118 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
+// Proxy route for contracts from CyC Hub
+app.get('/api/contratos', async (req, res) => {
+  try {
+    const HUB_URL = process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app';
+    const response = await fetch(`${HUB_URL}/arriendo/contratos`);
+    if (!response.ok) throw new Error(`Hub responded ${response.status}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (e) {
+    console.error('Error proxying contracts:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET operations dashboard stats for a month: ?mes=2026-06
+app.get('/api/stats/dashboard', (req, res) => {
+  try {
+    const mes = req.query.mes;
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
+      return res.status(400).json({ error: 'Parámetro mes requerido (formato: YYYY-MM)' });
+    }
+
+    const [year, month] = mes.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    // 1. Total active equipment
+    const totalEquipos = db.prepare('SELECT COUNT(*) as cnt FROM equipos WHERE activo = 1').get().cnt;
+    const totalPossible = totalEquipos * daysInMonth;
+
+    // 2. States breakdown
+    const stats = db.prepare(`
+      SELECT estado, COUNT(*) as cnt
+      FROM registro_diario
+      WHERE fecha LIKE ? || '%'
+      GROUP BY estado
+    `).all(mes);
+
+    const byEstado = {
+      arrendado: 0,
+      fuera_servicio: 0,
+      mantencion: 0,
+      disponible: 0,
+      uso_interno: 0,
+      en_taller: 0
+    };
+    for (const s of stats) {
+      if (s.estado in byEstado) {
+        byEstado[s.estado] = s.cnt;
+      }
+    }
+
+    // 3. Overall utilization rate (%)
+    const arrendados = byEstado.arrendado || 0;
+    const utilizacion = totalPossible > 0 ? Math.round((arrendados / totalPossible) * 100) : 0;
+
+    // 4. Clients distribution
+    const clientesArriendo = db.prepare(`
+      SELECT cliente, COUNT(*) as cnt
+      FROM registro_diario
+      WHERE fecha LIKE ? || '%' AND estado = 'arrendado' AND cliente IS NOT NULL AND cliente != ''
+      GROUP BY cliente
+      ORDER BY cnt DESC
+    `).all(mes);
+
+    // 5. Daily rentals timeline (días-equipo arrendados por fecha)
+    const dailyRentals = db.prepare(`
+      SELECT SUBSTR(fecha, 9, 2) as dia, COUNT(*) as cnt
+      FROM registro_diario
+      WHERE fecha LIKE ? || '%' AND estado = 'arrendado'
+      GROUP BY fecha
+      ORDER BY fecha
+    `).all(mes);
+
+    // 6. Downtime detail (días fuera de servicio o taller y comentarios)
+    const detenciones = db.prepare(`
+      SELECT equipo_id, COUNT(*) as dias, GROUP_CONCAT(COALESCE(comentario, 'Sin comentario'), ' | ') as comentarios
+      FROM registro_diario
+      WHERE fecha LIKE ? || '%' AND estado IN ('fuera_servicio', 'en_taller')
+      GROUP BY equipo_id
+      ORDER BY dias DESC
+    `).all(mes);
+
+    // 7. Mechanics locations and workload
+    const mecanicosUbicaciones = db.prepare(`
+      SELECT ubicacion, COUNT(*) as cnt
+      FROM registro_mecanicos
+      WHERE fecha LIKE ? || '%' AND estado IN ('trabajado', 'extra') AND ubicacion IS NOT NULL AND ubicacion != ''
+      GROUP BY ubicacion
+      ORDER BY cnt DESC
+    `).all(mes);
+
+    // 8. Total active mechanics
+    const totalMecanicos = db.prepare('SELECT COUNT(*) as cnt FROM mecanicos WHERE activo = 1').get().cnt;
+
+    res.json({
+      totalEquipos,
+      daysInMonth,
+      totalPossible,
+      utilizacion,
+      byEstado,
+      clientesArriendo,
+      dailyRentals,
+      detenciones,
+      mecanicosUbicaciones,
+      totalMecanicos
+    });
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── MECÁNICOS CRUD ──────────────────────────────────────────────────────────
 
 // GET all mecanicos
