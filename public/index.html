@@ -951,6 +951,34 @@
       .legend { padding: 0 16px 10px; }
       .calendar-container { padding: 0 16px 16px; }
     }
+
+    /* Estandarización botón volver al hub */
+    .btn-volver-hub {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: rgba(232, 101, 26, 0.1);
+      color: #E8651A !important;
+      border: 1px solid rgba(232, 101, 26, 0.3);
+      border-radius: 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      line-height: 1;
+    }
+    .btn-volver-hub:hover {
+      background: #E8651A;
+      color: #ffffff !important;
+      box-shadow: 0 4px 12px rgba(232, 101, 26, 0.2);
+      transform: translateY(-1px);
+    }
+    .btn-volver-hub svg {
+      stroke: currentColor;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -984,9 +1012,10 @@
         </button>
       </nav>
       
-      <div class="sidebar-footer">
-        <a href="https://cyc-hub-production.up.railway.app" class="btn btn-sidebar">
-          <span>◀</span> Volver al Hub
+      <div class="sidebar-footer" style="padding: 14px;">
+        <a href="https://cyc-hub-production.up.railway.app" class="btn-volver-hub" style="width: 100%; justify-content: center;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          Volver al Hub
         </a>
       </div>
     </aside>
@@ -997,7 +1026,13 @@
       <!-- PANEL: CALENDARIO DE FLOTA -->
       <div class="tab-panel active" id="panel-calendario">
         <div class="content-header">
-          <h1 class="page-title">🗓️ Calendario Operacional de Flota</h1>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <a href="https://cyc-hub-production.up.railway.app" class="btn-volver-hub">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              Volver al Hub
+            </a>
+            <h1 class="page-title" style="margin: 0;">🗓️ Calendario Operacional de Flota</h1>
+          </div>
           <div style="display:flex; gap:8px;">
             <button class="btn btn-sm btn-primary" id="btnSync" onclick="syncFromHub()">🔄 Sincronizar Hub</button>
           </div>
