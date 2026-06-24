@@ -723,7 +723,9 @@ function intervaloParaTipo(tipoNombre) {
   return tipo ? tipo.intervalo_horas : 0;
 }
 
-// Aplica una mantención al equipo: la inserta y, si es la más reciente, actualiza el horómetro del equipo
+// Registra una mantención en el historial.
+// El horómetro/fecha "actual" del equipo es exclusivamente el del sync (columnas I/J del sheet)
+// y nunca se sobreescribe desde una mantención — son datos independientes.
 function registrarMantencion({ equipo_id, tipo_mantencion, horometro, fecha, origen }) {
   const intervalo = intervaloParaTipo(tipo_mantencion);
   const horometroProxima = Number(horometro) + intervalo;
@@ -732,12 +734,6 @@ function registrarMantencion({ equipo_id, tipo_mantencion, horometro, fecha, ori
     INSERT INTO mantenciones (equipo_id, tipo_mantencion, horometro, fecha, horometro_proxima, origen)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(equipo_id, tipo_mantencion, Number(horometro), fecha, horometroProxima, origen || 'manual');
-
-  const equipo = db.prepare('SELECT fecha_horometro FROM equipos WHERE equipo_id = ?').get(equipo_id);
-  if (equipo && (!equipo.fecha_horometro || fecha >= equipo.fecha_horometro)) {
-    db.prepare('UPDATE equipos SET horometro_actual = ?, fecha_horometro = ? WHERE equipo_id = ?')
-      .run(String(horometro), fecha, equipo_id);
-  }
 
   return r.lastInsertRowid;
 }
