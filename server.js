@@ -1,5 +1,8 @@
 import express from 'express';
 import Database from 'better-sqlite3';
+import multer from 'multer';
+import PDFDocument from 'pdfkit';
+import * as XLSX from 'xlsx';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -24,9 +27,20 @@ db.pragma('journal_mode = WAL');
 const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
 db.exec(schema);
 
+// Migración defensiva: agregar columnas nuevas a `equipos` si no existen aún
+// (better-sqlite3 falla si se agrega una columna que ya existe, por eso no va en schema.sql)
+const equiposCols = new Set(db.prepare('PRAGMA table_info(equipos)').all().map(c => c.name));
+for (const [col, type] of [['horometro_actual', 'TEXT'], ['fecha_horometro', 'TEXT'], ['contrato_estado', 'TEXT']]) {
+  if (!equiposCols.has(col)) db.exec(`ALTER TABLE equipos ADD COLUMN ${col} ${type}`);
+}
+
+const ALERTA_UMBRAL_HORAS = 150;
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.static(join(__dirname, 'public')));
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 // GET config for frontend URLs
 app.get('/api/config', (req, res) => {
@@ -95,19 +109,23 @@ app.post('/api/equipos/sync', async (req, res) => {
     if (!equipos.length) return res.json({ synced: 0, msg: 'No se encontraron equipos en el Hub' });
 
     const stmt = db.prepare(`
-      INSERT INTO equipos (equipo_id, tipo, patente, propietario)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO equipos (equipo_id, tipo, patente, propietario, horometro_actual, fecha_horometro, contrato_estado)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(equipo_id) DO UPDATE SET
         tipo = COALESCE(excluded.tipo, tipo),
         patente = COALESCE(excluded.patente, patente),
         propietario = COALESCE(excluded.propietario, propietario),
+        horometro_actual = COALESCE(excluded.horometro_actual, horometro_actual),
+        fecha_horometro = COALESCE(excluded.fecha_horometro, fecha_horometro),
+        contrato_estado = COALESCE(excluded.contrato_estado, contrato_estado),
         activo = 1
     `);
 
     const insertMany = db.transaction((items) => {
       for (const eq of items) {
         if (!eq.id) continue;
-        stmt.run(eq.id.trim(), eq.tipo || null, eq.patente || null, eq.propietario || null);
+        stmt.run(eq.id.trim(), eq.tipo || null, eq.patente || null, eq.propietario || null,
+          eq.horometro || null, eq.fecha_horometro || null, eq.arrendado || null);
       }
     });
 
@@ -659,6 +677,218 @@ app.get('/api/stats/mecanicos', (req, res) => {
       byMecanico: listByMecanico,
       locationsGlobal
     });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── TIPOS DE MANTENCIÓN CRUD ────────────────────────────────────────────────
+
+app.get('/api/tipos-mantencion', (req, res) => {
+  try {
+    const tipos = db.prepare('SELECT * FROM tipos_mantencion WHERE activo = 1 ORDER BY intervalo_horas').all();
+    res.json(tipos);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/tipos-mantencion', (req, res) => {
+  try {
+    const { nombre, intervalo_horas } = req.body;
+    if (!nombre || !intervalo_horas) return res.status(400).json({ error: 'nombre e intervalo_horas requeridos' });
+    db.prepare(`
+      INSERT INTO tipos_mantencion (nombre, intervalo_horas) VALUES (?, ?)
+      ON CONFLICT(nombre) DO UPDATE SET intervalo_horas = excluded.intervalo_horas, activo = 1
+    `).run(nombre.trim(), Number(intervalo_horas));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/tipos-mantencion/:id', (req, res) => {
+  try {
+    db.prepare('UPDATE tipos_mantencion SET activo = 0 WHERE id = ?').run(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── MANTENCIONES ────────────────────────────────────────────────────────────
+
+function intervaloParaTipo(tipoNombre) {
+  const tipo = db.prepare('SELECT intervalo_horas FROM tipos_mantencion WHERE nombre = ?').get(tipoNombre);
+  return tipo ? tipo.intervalo_horas : 0;
+}
+
+// Aplica una mantención al equipo: la inserta y, si es la más reciente, actualiza el horómetro del equipo
+function registrarMantencion({ equipo_id, tipo_mantencion, horometro, fecha, origen }) {
+  const intervalo = intervaloParaTipo(tipo_mantencion);
+  const horometroProxima = Number(horometro) + intervalo;
+
+  const r = db.prepare(`
+    INSERT INTO mantenciones (equipo_id, tipo_mantencion, horometro, fecha, horometro_proxima, origen)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(equipo_id, tipo_mantencion, Number(horometro), fecha, horometroProxima, origen || 'manual');
+
+  const equipo = db.prepare('SELECT fecha_horometro FROM equipos WHERE equipo_id = ?').get(equipo_id);
+  if (equipo && (!equipo.fecha_horometro || fecha >= equipo.fecha_horometro)) {
+    db.prepare('UPDATE equipos SET horometro_actual = ?, fecha_horometro = ? WHERE equipo_id = ?')
+      .run(String(horometro), fecha, equipo_id);
+  }
+
+  return r.lastInsertRowid;
+}
+
+// GET listado principal: equipos + su última mantención + alerta
+app.get('/api/mantenciones/equipos-resumen', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT
+        e.equipo_id, e.patente, e.contrato_estado, e.horometro_actual, e.fecha_horometro,
+        m.id as mantencion_id, m.tipo_mantencion, m.horometro as mantencion_horometro,
+        m.fecha as mantencion_fecha, m.horometro_proxima
+      FROM equipos e
+      LEFT JOIN mantenciones m ON m.id = (
+        SELECT id FROM mantenciones WHERE equipo_id = e.equipo_id ORDER BY fecha DESC, id DESC LIMIT 1
+      )
+      WHERE e.activo = 1
+      ORDER BY e.equipo_id
+    `).all();
+
+    const resumen = rows.map(r => {
+      let alerta = 'sin_datos';
+      if (r.horometro_proxima != null && r.horometro_actual) {
+        const restante = r.horometro_proxima - Number(r.horometro_actual);
+        if (restante < 0) alerta = 'vencida';
+        else if (restante <= ALERTA_UMBRAL_HORAS) alerta = 'proxima';
+        else alerta = 'ok';
+      }
+      return { ...r, alerta };
+    });
+
+    res.json(resumen);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET historial de un equipo
+app.get('/api/mantenciones', (req, res) => {
+  try {
+    const { equipo_id } = req.query;
+    if (!equipo_id) return res.status(400).json({ error: 'equipo_id requerido' });
+    const historial = db.prepare('SELECT * FROM mantenciones WHERE equipo_id = ? ORDER BY fecha DESC, id DESC').all(equipo_id);
+    res.json(historial);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST registrar mantención manual
+app.post('/api/mantenciones', (req, res) => {
+  try {
+    const { equipo_id, tipo_mantencion, horometro, fecha } = req.body;
+    if (!equipo_id || !tipo_mantencion || horometro == null || !fecha) {
+      return res.status(400).json({ error: 'equipo_id, tipo_mantencion, horometro y fecha son requeridos' });
+    }
+    const id = registrarMantencion({ equipo_id, tipo_mantencion, horometro, fecha, origen: 'manual' });
+    res.json({ ok: true, id });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET exportar PDF de una mantención
+app.get('/api/mantenciones/:id/pdf', (req, res) => {
+  try {
+    const mant = db.prepare('SELECT * FROM mantenciones WHERE id = ?').get(req.params.id);
+    if (!mant) return res.status(404).json({ error: 'Mantención no encontrada' });
+    const equipo = db.prepare('SELECT * FROM equipos WHERE equipo_id = ?').get(mant.equipo_id);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="mantencion-${mant.equipo_id}-${mant.fecha}.pdf"`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    doc.pipe(res);
+
+    doc.fontSize(18).font('Helvetica-Bold').fillColor('#e8651a').text('TRANSPORTES CYC LIMITADA', { align: 'left' });
+    doc.fontSize(13).fillColor('#000').text('Registro de Mantención', { align: 'left' });
+    doc.moveDown(1.5);
+
+    const fechaEmision = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.fontSize(10).fillColor('#555').text(`Emitido el ${fechaEmision}`);
+    doc.moveDown(1);
+
+    doc.fontSize(11).fillColor('#000');
+    const row = (label, value) => {
+      doc.font('Helvetica-Bold').text(label + '  ', { continued: true, width: 260 });
+      doc.font('Helvetica').text(value ?? '—');
+    };
+
+    row('N° Interno:', equipo?.equipo_id || mant.equipo_id);
+    row('Patente:', equipo?.patente);
+    row('Tipo de Equipo:', equipo?.tipo);
+    doc.moveDown(0.5);
+    row('Tipo de Mantención:', mant.tipo_mantencion);
+    row('Fecha de Mantención:', mant.fecha);
+    row('Horómetro Mantención:', `${mant.horometro} Hrs.`);
+    row('Horómetro Próxima Mantención:', mant.horometro_proxima != null ? `${mant.horometro_proxima} Hrs.` : '—');
+
+    doc.moveDown(2);
+    doc.fontSize(9).fillColor('#777').text(
+      'Este documento es un registro interno de Transportes CyC Limitada y certifica que la mantención indicada fue registrada en el sistema con los datos arriba detallados.',
+      { align: 'left' }
+    );
+
+    doc.end();
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST carga masiva desde Excel (columnas: id, fecha, horometro, tipo)
+app.post('/api/mantenciones/import', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Archivo requerido' });
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
+
+    let importadas = 0;
+    const errores = [];
+
+    const importTx = db.transaction(() => {
+      rows.forEach((row, idx) => {
+        const equipo_id = String(row.id ?? row.ID ?? row.equipo_id ?? '').trim();
+        const tipo_mantencion = String(row.tipo ?? row.Tipo ?? '').trim();
+        const horometro = row.horometro ?? row.Horometro ?? row['Horómetro'];
+        let fecha = row.fecha ?? row.Fecha;
+
+        if (!equipo_id || !tipo_mantencion || horometro == null || !fecha) {
+          errores.push(`Fila ${idx + 2}: datos incompletos`);
+          return;
+        }
+
+        // Normalizar fecha de Excel (puede venir como número de serie o string)
+        if (fecha instanceof Date) {
+          fecha = fecha.toISOString().slice(0, 10);
+        } else if (typeof fecha === 'number') {
+          const parsed = XLSX.SSF.parse_date_code(fecha);
+          fecha = `${parsed.y}-${String(parsed.m).padStart(2, '0')}-${String(parsed.d).padStart(2, '0')}`;
+        } else {
+          fecha = String(fecha).trim();
+        }
+
+        registrarMantencion({ equipo_id, tipo_mantencion, horometro, fecha, origen: 'import' });
+        importadas++;
+      });
+    });
+    importTx();
+
+    res.json({ ok: true, importadas, errores });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

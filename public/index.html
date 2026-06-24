@@ -1007,6 +1007,9 @@
         <button class="menu-item" data-tab="ordenes" onclick="switchTab('ordenes')">
           <span class="menu-icon">📝</span> Órdenes de Trabajo <span class="badge-menu">Soon</span>
         </button>
+        <button class="menu-item" data-tab="mantenciones" onclick="switchTab('mantenciones')">
+          <span class="menu-icon">🛠️</span> Mantenciones
+        </button>
         <button class="menu-item" data-tab="equipos" onclick="switchTab('equipos')">
           <span class="menu-icon">⚙️</span> Gestión de Recursos
         </button>
@@ -1420,7 +1423,134 @@
         </div>
       </div>
 
+      <!-- PANEL: MANTENCIONES -->
+      <div class="tab-panel" id="panel-mantenciones">
+        <div class="content-header">
+          <h1 class="page-title">🛠️ Mantenciones de Equipos</h1>
+        </div>
+
+        <!-- KPI Bar -->
+        <div class="kpi-bar">
+          <div class="kpi-card">
+            <div class="kpi-label">Equipos</div>
+            <div class="kpi-value" id="kpiMantTotal">—</div>
+            <div class="kpi-sub">en el parque</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Próximas a Vencer</div>
+            <div class="kpi-value" id="kpiMantProximas" style="color:#f59e0b;">—</div>
+            <div class="kpi-sub">≤150 hrs para la próxima</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Vencidas</div>
+            <div class="kpi-value" id="kpiMantVencidas" style="color:#ef4444;">—</div>
+            <div class="kpi-sub">superaron el horómetro</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Sin Registro</div>
+            <div class="kpi-value" id="kpiMantSinDatos" style="color:#94a3b8;">—</div>
+            <div class="kpi-sub">sin mantención registrada</div>
+          </div>
+        </div>
+
+        <div class="tab-content-inner">
+          <div class="controls" style="margin-bottom:16px;">
+            <div class="controls-left">
+              <button class="btn btn-primary" onclick="openMantencionModal()">+ Agregar Mantención</button>
+              <button class="btn btn-sm" onclick="document.getElementById('mantImportFile').click()">⬆️ Cargar Excel Histórico</button>
+              <input type="file" id="mantImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importMantencionesExcel(event)">
+            </div>
+          </div>
+
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow-x:auto;">
+            <table class="calendar-table" style="width:100%; border-collapse:collapse;">
+              <thead>
+                <tr>
+                  <th class="th-equipo">N° Interno</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:left;">PPU</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Contrato / Disponible</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Horómetro Actual</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Última Mantención</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Próxima Mantención</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:center;">Estado</th>
+                  <th style="padding:10px; font-size:11px; font-weight:600; text-transform:uppercase; color:var(--text-secondary); text-align:center;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="mantencionesBody">
+                <!-- dynamic content -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- CONFIG: TIPOS DE MANTENCIÓN -->
+          <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-top:28px; box-shadow:var(--shadow);">
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">⚙️ Tipos de Mantención e Intervalos</h3>
+            <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:16px;">
+              <div>
+                <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Nombre</label>
+                <input class="modal-input" id="newTipoMantNombre" placeholder="Ej: Mantención 250 hrs" style="margin-bottom:0; width:220px;">
+              </div>
+              <div>
+                <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Intervalo (hrs)</label>
+                <input class="modal-input" type="number" id="newTipoMantIntervalo" placeholder="Ej: 250" style="margin-bottom:0; width:140px;">
+              </div>
+              <button class="btn btn-primary" onclick="addTipoMantencion()" style="height:37px;">+ Agregar Tipo</button>
+            </div>
+            <div class="equipo-list" id="tiposMantList"></div>
+          </div>
+        </div>
+      </div>
+
     </main>
+  </div>
+
+  <!-- ─── Mantención Modal ───────────────────────────────────────── -->
+  <div class="modal-overlay" id="mantencionModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Agregar Mantención</h3>
+        <button class="modal-close" onclick="closeMantencionModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label>Equipo</label>
+        <select class="modal-input" id="mantEquipoSelect"></select>
+        <label>Tipo de Mantención</label>
+        <select class="modal-input" id="mantTipoSelect"></select>
+        <label>Horómetro</label>
+        <input class="modal-input" type="number" step="0.1" id="mantHorometro" placeholder="Ej: 9572">
+        <label>Fecha</label>
+        <input class="modal-input" type="date" id="mantFecha">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeMantencionModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitMantencion()">Guardar Mantención</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Histórico Modal ────────────────────────────────────────── -->
+  <div class="modal-overlay" id="historicoModal">
+    <div class="modal" style="width:560px;">
+      <div class="modal-header">
+        <h3 id="historicoTitle">Histórico de Mantenciones</h3>
+        <button class="modal-close" onclick="closeHistoricoModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="overflow-x:auto;">
+          <table class="calendar-table" style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="padding:8px; font-size:11px; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Fecha</th>
+                <th style="padding:8px; font-size:11px; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Tipo</th>
+                <th style="padding:8px; font-size:11px; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Horómetro</th>
+                <th style="padding:8px; font-size:11px; text-transform:uppercase; color:var(--text-secondary); text-align:left;">Próxima</th>
+              </tr>
+            </thead>
+            <tbody id="historicoBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ─── Cell Modal ─────────────────────────────────────────────── -->
@@ -1619,6 +1749,8 @@
         loadEquipos();
         loadMecanicos();
         loadUbicaciones();
+      } else if (tabId === 'mantenciones') {
+        loadMantenciones();
       } else if (tabId === 'inspecciones') {
         const iframe = document.getElementById('iframe-inspecciones');
         if (iframe && !iframe.getAttribute('src')) {
@@ -2940,6 +3072,213 @@
 
     function showToast(msg, type = 'success') {
       toast(msg, type === 'info' ? 'success' : type);
+    }
+
+    // ─── MANTENCIONES ─────────────────────────────────────────────
+    let mantTiposCache = [];
+
+    function escapeHtmlMant(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    async function loadMantenciones() {
+      try {
+        if (!equipos.length) await loadEquipos();
+        const [resumenRes, tiposRes] = await Promise.all([
+          fetch('/api/mantenciones/equipos-resumen'),
+          fetch('/api/tipos-mantencion')
+        ]);
+        const resumen = await resumenRes.json();
+        mantTiposCache = await tiposRes.json();
+        renderMantencionesTabla(resumen);
+        renderTiposMantencionList();
+      } catch (e) {
+        console.error('Error loading mantenciones:', e);
+        showToast('Error al cargar mantenciones', 'error');
+      }
+    }
+
+    function renderMantencionesTabla(resumen) {
+      const tbody = document.getElementById('mantencionesBody');
+      tbody.innerHTML = '';
+
+      let proximas = 0, vencidas = 0, sinDatos = 0;
+
+      const badge = (alerta) => {
+        if (alerta === 'vencida') { vencidas++; return '<span style="background:#fee2e2; color:#ef4444; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">Vencida</span>'; }
+        if (alerta === 'proxima') { proximas++; return '<span style="background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">Próxima</span>'; }
+        if (alerta === 'sin_datos') { sinDatos++; return '<span style="background:#f1f5f9; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">Sin datos</span>'; }
+        return '<span style="background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">OK</span>';
+      };
+
+      if (!resumen.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-muted);">Sin equipos registrados. Sincroniza equipos desde la pestaña de Calendario.</td></tr>';
+        document.getElementById('kpiMantTotal').textContent = 0;
+        document.getElementById('kpiMantProximas').textContent = 0;
+        document.getElementById('kpiMantVencidas').textContent = 0;
+        document.getElementById('kpiMantSinDatos').textContent = 0;
+        return;
+      }
+
+      resumen.forEach(r => {
+        const ultimaMant = r.mantencion_id
+          ? `${r.mantencion_horometro} Hrs. · ${r.mantencion_fecha} <div style="font-size:11px; color:var(--text-muted);">${escapeHtmlMant(r.tipo_mantencion)}</div>`
+          : '—';
+        const proximaMant = r.horometro_proxima != null ? `${r.horometro_proxima} Hrs.` : '—';
+
+        tbody.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td class="td-equipo" style="padding:10px; font-weight:700;">${escapeHtmlMant(r.equipo_id)}</td>
+            <td style="padding:10px;">${escapeHtmlMant(r.patente || '—')}</td>
+            <td style="padding:10px;">${escapeHtmlMant(r.contrato_estado || '—')}</td>
+            <td style="padding:10px;">${escapeHtmlMant(r.horometro_actual || '—')} Hrs.<div style="font-size:11px; color:var(--text-muted);">${escapeHtmlMant(r.fecha_horometro || '')}</div></td>
+            <td style="padding:10px;">${ultimaMant}</td>
+            <td style="padding:10px;">${proximaMant}</td>
+            <td style="padding:10px; text-align:center;">${badge(r.alerta)}</td>
+            <td style="padding:10px; text-align:center; white-space:nowrap;">
+              ${r.mantencion_id ? `<button class="btn btn-sm" onclick="window.open('/api/mantenciones/${r.mantencion_id}/pdf','_blank')" title="Exportar PDF">📄</button>` : ''}
+              <button class="btn btn-sm" onclick="openHistoricoModal('${escapeHtmlMant(r.equipo_id)}')" title="Ver histórico">📋</button>
+            </td>
+          </tr>
+        `);
+      });
+
+      document.getElementById('kpiMantTotal').textContent = resumen.length;
+      document.getElementById('kpiMantProximas').textContent = proximas;
+      document.getElementById('kpiMantVencidas').textContent = vencidas;
+      document.getElementById('kpiMantSinDatos').textContent = sinDatos;
+    }
+
+    function renderTiposMantencionList() {
+      const list = document.getElementById('tiposMantList');
+      if (!mantTiposCache.length) {
+        list.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:20px;">Sin tipos de mantención configurados.</p>';
+        return;
+      }
+      list.innerHTML = mantTiposCache.map(t => `
+        <div class="equipo-chip">
+          <div class="equipo-chip-info">
+            <div class="eq-id">${escapeHtmlMant(t.nombre)}</div>
+            <div class="eq-tipo">cada ${t.intervalo_horas} hrs</div>
+          </div>
+          <button class="delete-btn" onclick="deleteTipoMantencion(${t.id})" title="Eliminar">×</button>
+        </div>
+      `).join('');
+    }
+
+    async function addTipoMantencion() {
+      const nombre = document.getElementById('newTipoMantNombre').value.trim();
+      const intervalo_horas = document.getElementById('newTipoMantIntervalo').value;
+      if (!nombre || !intervalo_horas) return showToast('Completa nombre e intervalo', 'error');
+      try {
+        await fetch('/api/tipos-mantencion', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, intervalo_horas })
+        });
+        document.getElementById('newTipoMantNombre').value = '';
+        document.getElementById('newTipoMantIntervalo').value = '';
+        showToast('Tipo de mantención agregado');
+        loadMantenciones();
+      } catch (e) {
+        showToast('Error al agregar tipo de mantención', 'error');
+      }
+    }
+
+    async function deleteTipoMantencion(id) {
+      try {
+        await fetch(`/api/tipos-mantencion/${id}`, { method: 'DELETE' });
+        showToast('Tipo de mantención eliminado');
+        loadMantenciones();
+      } catch (e) {
+        showToast('Error al eliminar', 'error');
+      }
+    }
+
+    function openMantencionModal() {
+      const equipoSelect = document.getElementById('mantEquipoSelect');
+      equipoSelect.innerHTML = equipos.map(e => `<option value="${escapeHtmlMant(e.equipo_id)}">${escapeHtmlMant(e.equipo_id)} ${e.patente ? '— ' + escapeHtmlMant(e.patente) : ''}</option>`).join('');
+
+      const tipoSelect = document.getElementById('mantTipoSelect');
+      tipoSelect.innerHTML = mantTiposCache.map(t => `<option value="${escapeHtmlMant(t.nombre)}">${escapeHtmlMant(t.nombre)} (cada ${t.intervalo_horas} hrs)</option>`).join('');
+
+      document.getElementById('mantHorometro').value = '';
+      document.getElementById('mantFecha').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('mantencionModal').classList.add('active');
+    }
+
+    function closeMantencionModal() {
+      document.getElementById('mantencionModal').classList.remove('active');
+    }
+
+    async function submitMantencion() {
+      const equipo_id = document.getElementById('mantEquipoSelect').value;
+      const tipo_mantencion = document.getElementById('mantTipoSelect').value;
+      const horometro = document.getElementById('mantHorometro').value;
+      const fecha = document.getElementById('mantFecha').value;
+      if (!equipo_id || !tipo_mantencion || !horometro || !fecha) {
+        return showToast('Completa todos los campos', 'error');
+      }
+      try {
+        const res = await fetch('/api/mantenciones', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ equipo_id, tipo_mantencion, horometro, fecha })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error desconocido');
+        showToast('Mantención registrada');
+        closeMantencionModal();
+        loadMantenciones();
+      } catch (e) {
+        showToast('Error al guardar mantención: ' + e.message, 'error');
+      }
+    }
+
+    async function openHistoricoModal(equipoId) {
+      document.getElementById('historicoTitle').textContent = `Histórico de Mantenciones — ${equipoId}`;
+      document.getElementById('historicoModal').classList.add('active');
+      const tbody = document.getElementById('historicoBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; text-align:center; color:var(--text-muted);">Cargando...</td></tr>';
+      try {
+        const res = await fetch(`/api/mantenciones?equipo_id=${encodeURIComponent(equipoId)}`);
+        const historial = await res.json();
+        if (!historial.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; text-align:center; color:var(--text-muted);">Sin mantenciones registradas</td></tr>';
+          return;
+        }
+        tbody.innerHTML = historial.map(h => `
+          <tr>
+            <td style="padding:8px;">${h.fecha}</td>
+            <td style="padding:8px;">${escapeHtmlMant(h.tipo_mantencion)}</td>
+            <td style="padding:8px;">${h.horometro} Hrs.</td>
+            <td style="padding:8px;">${h.horometro_proxima != null ? h.horometro_proxima + ' Hrs.' : '—'}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="4" style="padding:14px; text-align:center; color:#ef4444;">Error al cargar histórico</td></tr>';
+      }
+    }
+
+    function closeHistoricoModal() {
+      document.getElementById('historicoModal').classList.remove('active');
+    }
+
+    async function importMantencionesExcel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        showToast('Importando historial...', 'info');
+        const res = await fetch('/api/mantenciones/import', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error desconocido');
+        showToast(`Importadas ${data.importadas} mantenciones${data.errores.length ? ` (${data.errores.length} con errores)` : ''}`);
+        loadMantenciones();
+      } catch (e) {
+        showToast('Error al importar Excel: ' + e.message, 'error');
+      } finally {
+        event.target.value = '';
+      }
     }
   </script>
 </body>

@@ -52,10 +52,36 @@ CREATE TABLE IF NOT EXISTS registro_mecanicos (
 );
 
 -- Insertar ubicaciones iniciales
-INSERT OR IGNORE INTO ubicaciones (nombre) VALUES 
+INSERT OR IGNORE INTO ubicaciones (nombre) VALUES
 ('Calama'),
 ('Copiapó'),
 ('Santiago'),
 ('Iquique'),
 ('La Serena');
+
+-- Tipos de mantención y su intervalo en horas (configurable)
+CREATE TABLE IF NOT EXISTS tipos_mantencion (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre          TEXT NOT NULL UNIQUE,
+  intervalo_horas INTEGER NOT NULL,
+  activo          INTEGER DEFAULT 1
+);
+
+INSERT OR IGNORE INTO tipos_mantencion (nombre, intervalo_horas) VALUES
+('Mantención 250 hrs', 250),
+('Mantención 500 hrs', 500),
+('Mantención 1000 hrs', 1000);
+
+-- Historial de mantenciones por equipo
+CREATE TABLE IF NOT EXISTS mantenciones (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  equipo_id         TEXT NOT NULL,
+  tipo_mantencion   TEXT NOT NULL,
+  horometro         REAL NOT NULL,
+  fecha             TEXT NOT NULL,
+  horometro_proxima REAL,
+  origen            TEXT DEFAULT 'manual',
+  created_at        TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_mant_equipo ON mantenciones(equipo_id, fecha DESC);
 
