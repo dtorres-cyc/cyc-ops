@@ -834,10 +834,10 @@ app.get('/api/mantenciones/:id/pdf', (req, res) => {
     doc.pipe(res);
 
     const logoPath = join(__dirname, 'public', 'logo-cyc.png');
-    try { doc.image(logoPath, 60, 50, { height: 42 }); } catch { /* logo no disponible */ }
+    try { doc.image(logoPath, 60, 45, { height: 75 }); } catch { /* logo no disponible */ }
     doc.fontSize(10).font('Helvetica').fillColor('#666').text(formatFechaEs(new Date()), 60, 60, { align: 'right' });
 
-    doc.y = 130;
+    doc.y = 150;
     doc.fontSize(16).font('Helvetica-Bold').fillColor('#1a1a1a')
       .text('Certificado de mantención', { align: 'center' });
     doc.moveDown(1.5);
@@ -859,20 +859,21 @@ app.get('/api/mantenciones/:id/pdf', (req, res) => {
     doc.moveDown(0.4);
 
     doc.fontSize(9.5);
-    const row = (label, value) => {
-      doc.font('Helvetica').fillColor('#555').text(`${label}:`, { continued: true, width: 230 });
-      doc.font('Helvetica').fillColor('#1a1a1a').text(`  ${value ?? '—'}`);
+    const bullet = (label, value) => {
+      doc.font('Helvetica').fillColor('#1a1a1a').text('•  ', { continued: true, indent: 10 });
+      doc.font('Helvetica-Bold').fillColor('#555').text(`${label}: `, { continued: true });
+      doc.font('Helvetica').fillColor('#1a1a1a').text(value ?? '—');
     };
 
-    row('Tipo Máquina', equipo?.tipo);
-    row('Marca', equipo?.marca);
-    row('Modelo', equipo?.modelo);
-    row('Patente', equipo?.patente);
-    row('Año', equipo?.anio);
+    bullet('Tipo Máquina', equipo?.tipo);
+    bullet('Marca', equipo?.marca);
+    bullet('Modelo', equipo?.modelo);
+    bullet('Patente', equipo?.patente);
+    bullet('Año', equipo?.anio);
     doc.moveDown(0.3);
-    row('Horómetro Mantención', `${mant.horometro} Hrs.`);
-    row('Tipo Mantención', mant.tipo_mantencion);
-    row('Horómetro Próxima Mantención', mant.horometro_proxima != null ? `${mant.horometro_proxima} Hrs.` : '—');
+    bullet('Horómetro Mantención', `${mant.horometro} Hrs.`);
+    bullet('Tipo Mantención', mant.tipo_mantencion);
+    bullet('Horómetro Próxima Mantención', mant.horometro_proxima != null ? `${mant.horometro_proxima} Hrs.` : '—');
 
     doc.y = 740;
     doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor('#e5e5e5').stroke();
