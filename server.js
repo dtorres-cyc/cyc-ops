@@ -718,6 +718,15 @@ app.delete('/api/tipos-mantencion/:id', (req, res) => {
 
 // ─── MANTENCIONES ────────────────────────────────────────────────────────────
 
+// La planilla de origen usa formato chileno: "." separa miles, "," separa decimales
+// (ej. "9.572" = 9572 hrs, no 9.572). Number() de JS lo interpreta al revés, así que se parsea a mano.
+function parseHorometroChileno(val) {
+  if (val == null || val === '') return null;
+  const cleaned = String(val).trim().replace(/\./g, '').replace(',', '.');
+  const n = parseFloat(cleaned);
+  return Number.isNaN(n) ? null : n;
+}
+
 function intervaloParaTipo(tipoNombre) {
   const tipo = db.prepare('SELECT intervalo_horas FROM tipos_mantencion WHERE nombre = ?').get(tipoNombre);
   return tipo ? tipo.intervalo_horas : 0;
@@ -756,8 +765,9 @@ app.get('/api/mantenciones/equipos-resumen', (req, res) => {
 
     const resumen = rows.map(r => {
       let alerta = 'sin_datos';
-      if (r.horometro_proxima != null && r.horometro_actual) {
-        const restante = r.horometro_proxima - Number(r.horometro_actual);
+      const horometroActualNum = parseHorometroChileno(r.horometro_actual);
+      if (r.horometro_proxima != null && horometroActualNum != null) {
+        const restante = r.horometro_proxima - horometroActualNum;
         if (restante < 0) alerta = 'vencida';
         else if (restante <= ALERTA_UMBRAL_HORAS) alerta = 'proxima';
         else alerta = 'ok';
