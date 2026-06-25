@@ -30,7 +30,7 @@ db.exec(schema);
 // Migración defensiva: agregar columnas nuevas a `equipos` si no existen aún
 // (better-sqlite3 falla si se agrega una columna que ya existe, por eso no va en schema.sql)
 const equiposCols = new Set(db.prepare('PRAGMA table_info(equipos)').all().map(c => c.name));
-for (const [col, type] of [['horometro_actual', 'TEXT'], ['fecha_horometro', 'TEXT'], ['contrato_estado', 'TEXT']]) {
+for (const [col, type] of [['horometro_actual', 'TEXT'], ['fecha_horometro', 'TEXT'], ['contrato_estado', 'TEXT'], ['anio', 'TEXT']]) {
   if (!equiposCols.has(col)) db.exec(`ALTER TABLE equipos ADD COLUMN ${col} ${type}`);
 }
 
@@ -109,8 +109,8 @@ app.post('/api/equipos/sync', async (req, res) => {
     if (!equipos.length) return res.json({ synced: 0, msg: 'No se encontraron equipos en el Hub' });
 
     const stmt = db.prepare(`
-      INSERT INTO equipos (equipo_id, tipo, patente, propietario, horometro_actual, fecha_horometro, contrato_estado)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO equipos (equipo_id, tipo, patente, propietario, horometro_actual, fecha_horometro, contrato_estado, marca, modelo, anio)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(equipo_id) DO UPDATE SET
         tipo = COALESCE(excluded.tipo, tipo),
         patente = COALESCE(excluded.patente, patente),
@@ -118,6 +118,9 @@ app.post('/api/equipos/sync', async (req, res) => {
         horometro_actual = COALESCE(excluded.horometro_actual, horometro_actual),
         fecha_horometro = COALESCE(excluded.fecha_horometro, fecha_horometro),
         contrato_estado = COALESCE(excluded.contrato_estado, contrato_estado),
+        marca = COALESCE(excluded.marca, marca),
+        modelo = COALESCE(excluded.modelo, modelo),
+        anio = COALESCE(excluded.anio, anio),
         activo = 1
     `);
 
@@ -125,7 +128,8 @@ app.post('/api/equipos/sync', async (req, res) => {
       for (const eq of items) {
         if (!eq.id) continue;
         stmt.run(eq.id.trim(), eq.tipo || null, eq.patente || null, eq.propietario || null,
-          eq.horometro || null, eq.fecha_horometro || null, eq.arrendado || null);
+          eq.horometro || null, eq.fecha_horometro || null, eq.arrendado || null,
+          eq.marca || null, eq.modelo || null, eq.anio || null);
       }
     });
 
@@ -807,6 +811,15 @@ app.post('/api/mantenciones', (req, res) => {
   }
 });
 
+const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function formatFechaEs(fecha) {
+  if (!fecha) return null;
+  const d = fecha instanceof Date ? fecha : new Date(fecha + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return String(fecha);
+  return `${d.getDate()} de ${MESES_ES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
 // GET exportar PDF de una mantención
 app.get('/api/mantenciones/:id/pdf', (req, res) => {
   try {
@@ -820,34 +833,51 @@ app.get('/api/mantenciones/:id/pdf', (req, res) => {
     const doc = new PDFDocument({ size: 'A4', margin: 60 });
     doc.pipe(res);
 
-    doc.fontSize(18).font('Helvetica-Bold').fillColor('#e8651a').text('TRANSPORTES CYC LIMITADA', { align: 'left' });
-    doc.fontSize(13).fillColor('#000').text('Registro de Mantención', { align: 'left' });
+    const logoPath = join(__dirname, 'public', 'logo-cyc.png');
+    try { doc.image(logoPath, 60, 50, { height: 42 }); } catch { /* logo no disponible */ }
+    doc.fontSize(10).font('Helvetica').fillColor('#666').text(formatFechaEs(new Date()), 60, 60, { align: 'right' });
+
+    doc.y = 130;
+    doc.fontSize(16).font('Helvetica-Bold').fillColor('#1a1a1a')
+      .text('Certificado de mantención', { align: 'center' });
     doc.moveDown(1.5);
 
-    const fechaEmision = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.fontSize(10).fillColor('#555').text(`Emitido el ${fechaEmision}`);
-    doc.moveDown(1);
+    const fechaMantencion = formatFechaEs(mant.fecha);
+    doc.fontSize(11).font('Helvetica').fillColor('#2a2a2a');
+    doc.text(
+      `Por medio de la presente, Transportes CYC Ltda, RUT: 76.350.127-2, informa que el equipo detallado a continuación se encuentra con su mantención al día, efectuada el ${fechaMantencion}.`,
+      { align: 'justify', lineGap: 3 }
+    );
+    doc.moveDown(0.8);
+    doc.text(
+      'Se certifica que, a la fecha indicada, el equipo está en condiciones adecuadas para trabajar en su faena. Sin embargo, se aclara que esta certificación no constituye una garantía de ningún tipo. Es responsabilidad del usuario operar los equipos conforme a las normas estándar de aplicación, las cuales están descritas en el "Manual de Operaciones y Mantenimiento del Equipo".',
+      { align: 'justify', lineGap: 3 }
+    );
+    doc.moveDown(1.5);
 
-    doc.fontSize(11).fillColor('#000');
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#1a1a1a').text('Datos equipo:');
+    doc.moveDown(0.4);
+
+    doc.fontSize(9.5);
     const row = (label, value) => {
-      doc.font('Helvetica-Bold').text(label + '  ', { continued: true, width: 260 });
-      doc.font('Helvetica').text(value ?? '—');
+      doc.font('Helvetica').fillColor('#555').text(`${label}:`, { continued: true, width: 230 });
+      doc.font('Helvetica').fillColor('#1a1a1a').text(`  ${value ?? '—'}`);
     };
 
-    row('N° Interno:', equipo?.equipo_id || mant.equipo_id);
-    row('Patente:', equipo?.patente);
-    row('Tipo de Equipo:', equipo?.tipo);
-    doc.moveDown(0.5);
-    row('Tipo de Mantención:', mant.tipo_mantencion);
-    row('Fecha de Mantención:', mant.fecha);
-    row('Horómetro Mantención:', `${mant.horometro} Hrs.`);
-    row('Horómetro Próxima Mantención:', mant.horometro_proxima != null ? `${mant.horometro_proxima} Hrs.` : '—');
+    row('Tipo Máquina', equipo?.tipo);
+    row('Marca', equipo?.marca);
+    row('Modelo', equipo?.modelo);
+    row('Patente', equipo?.patente);
+    row('Año', equipo?.anio);
+    doc.moveDown(0.3);
+    row('Horómetro Mantención', `${mant.horometro} Hrs.`);
+    row('Tipo Mantención', mant.tipo_mantencion);
+    row('Horómetro Próxima Mantención', mant.horometro_proxima != null ? `${mant.horometro_proxima} Hrs.` : '—');
 
-    doc.moveDown(2);
-    doc.fontSize(9).fillColor('#777').text(
-      'Este documento es un registro interno de Transportes CyC Limitada y certifica que la mantención indicada fue registrada en el sistema con los datos arriba detallados.',
-      { align: 'left' }
-    );
+    doc.y = 740;
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).strokeColor('#e5e5e5').stroke();
+    doc.moveDown(0.5);
+    doc.fontSize(9).font('Helvetica').fillColor('#999').text('Transportes CYC Ltda', { align: 'center' });
 
     doc.end();
   } catch (e) {
