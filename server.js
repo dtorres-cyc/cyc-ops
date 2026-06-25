@@ -870,7 +870,10 @@ app.post('/api/mantenciones/import', upload.single('file'), (req, res) => {
       rows.forEach((row, idx) => {
         const equipo_id = String(row.id ?? row.ID ?? row.equipo_id ?? '').trim();
         const tipo_mantencion = String(row.tipo ?? row.Tipo ?? '').trim();
-        const horometro = row.horometro ?? row.Horometro ?? row['Horómetro'];
+        const horometroRaw = row.horometro ?? row.Horometro ?? row['Horómetro'];
+        // Si la celda viene como texto (ej. "6.549" formato chileno), parsear con separador de miles.
+        // Si ya es un número de Excel, usarlo directo.
+        const horometro = typeof horometroRaw === 'number' ? horometroRaw : parseHorometroChileno(horometroRaw);
         let fecha = row.fecha ?? row.Fecha;
 
         if (!equipo_id || !tipo_mantencion || horometro == null || !fecha) {
