@@ -5,61 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CyC Ops — Calendario Operacional de Flota</title>
   <meta name="description" content="Calendario operacional de flota de equipos — Transportes CyC Limitada">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/cyc-tokens.css">
+  <link rel="icon" href="/isotipo-cyc-simple.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    /* Los nombres de abajo son alias hacia cyc-tokens.css, la hoja compartida
+       por las cuatro apps. Se mantienen para no reescribir 3.000 líneas de
+       reglas; el valor real vive en el sistema, no acá. */
     :root {
-      --bg-primary: #f4f6f9;
-      --bg-secondary: #ffffff;
-      --bg-card: #ffffff;
-      --bg-card-hover: #f9fafb;
-      --bg-modal: #ffffff;
-      --border: #e2e8f0;
-      --border-hover: #cbd5e1;
-      --text-primary: #1e293b;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
-      --accent: #e8651a;
-      --accent-hover: #c9540d;
-      --accent-glow: rgba(232,101,26,0.15);
-      /* Status colors */
-      --st-arrendado: #22c55e;
-      --st-arrendado-bg: rgba(34,197,94,0.12);
-      --st-fuera-servicio: #ef4444;
-      --st-fuera-servicio-bg: rgba(239,68,68,0.12);
-      --st-mantencion: #d97706;
-      --st-mantencion-bg: rgba(217,119,6,0.12);
-      --st-disponible: #64748b;
-      --st-disponible-bg: rgba(100,116,139,0.1);
-      --st-uso-interno: #e8651a;
-      --st-uso-interno-bg: rgba(232,101,26,0.12);
-      --st-en-taller: #a855f7;
-      --st-en-taller-bg: rgba(168,85,247,0.12);
-      /* Mechanics status colors */
-      --st-mec-trabajado: #10b981;
-      --st-mec-trabajado-bg: rgba(16,185,129,0.12);
-      --st-mec-extra: #3b82f6;
-      --st-mec-extra-bg: rgba(59,130,246,0.12);
-      --st-mec-subida: #f59e0b;
-      --st-mec-subida-bg: rgba(245,158,11,0.12);
-      --st-mec-bajada: #d97706;
-      --st-mec-bajada-bg: rgba(217,119,6,0.12);
-      --st-mec-descanso: #64748b;
-      --st-mec-descanso-bg: rgba(100,116,139,0.1);
-      --st-mec-licencia: #ec4899;
-      --st-mec-licencia-bg: rgba(236,72,153,0.12);
-      --st-mec-vacaciones: #06b6d4;
-      --st-mec-vacaciones-bg: rgba(6,182,212,0.12);
-      --radius: 10px;
-      --radius-sm: 6px;
-      --shadow: 0 10px 25px -5px rgba(15,23,42,0.08), 0 8px 16px -6px rgba(15,23,42,0.04);
-      --transition: all 0.2s ease;
+      --bg-primary:   var(--cyc-bg);
+      --bg-secondary: var(--cyc-surface);
+      --bg-card:      var(--cyc-surface);
+      --bg-card-hover:var(--cyc-surface-2);
+      --bg-modal:     var(--cyc-surface);
+      --border:       var(--cyc-border);
+      --border-hover: var(--cyc-border-strong);
+      --text-primary:   var(--cyc-text);
+      --text-secondary: var(--cyc-text-2);
+      --text-muted:     var(--cyc-text-3);
+      --accent:       var(--cyc-brand);
+      --accent-hover: var(--cyc-brand-hover);
+      --accent-ink:   var(--cyc-brand-ink);
+      --accent-glow:  var(--cyc-brand-glow);
+
+      /* Estados de flota */
+      --st-arrendado:        var(--cyc-st-arrendado);
+      --st-arrendado-bg:     var(--cyc-st-arrendado-bg);
+      --st-fuera-servicio:   var(--cyc-st-fuera);
+      --st-fuera-servicio-bg:var(--cyc-st-fuera-bg);
+      --st-mantencion:       var(--cyc-st-mantencion);
+      --st-mantencion-bg:    var(--cyc-st-mantencion-bg);
+      --st-disponible:       var(--cyc-st-disponible);
+      --st-disponible-bg:    var(--cyc-st-disponible-bg);
+      --st-uso-interno:      var(--cyc-st-interno);
+      --st-uso-interno-bg:   var(--cyc-st-interno-bg);
+      --st-en-taller:        var(--cyc-st-taller);
+      --st-en-taller-bg:     var(--cyc-st-taller-bg);
+
+      /* Estados de mecánicos */
+      --st-mec-trabajado:     var(--cyc-mec-trabajado);
+      --st-mec-trabajado-bg:  var(--cyc-mec-trabajado-bg);
+      --st-mec-extra:         var(--cyc-mec-extra);
+      --st-mec-extra-bg:      var(--cyc-mec-extra-bg);
+      --st-mec-subida:        var(--cyc-mec-subida);
+      --st-mec-subida-bg:     var(--cyc-mec-subida-bg);
+      --st-mec-bajada:        var(--cyc-mec-bajada);
+      --st-mec-bajada-bg:     var(--cyc-mec-bajada-bg);
+      --st-mec-descanso:      var(--cyc-mec-descanso);
+      --st-mec-descanso-bg:   var(--cyc-mec-descanso-bg);
+      --st-mec-licencia:      var(--cyc-mec-licencia);
+      --st-mec-licencia-bg:   var(--cyc-mec-licencia-bg);
+      --st-mec-vacaciones:    var(--cyc-mec-vacaciones);
+      --st-mec-vacaciones-bg: var(--cyc-mec-vacaciones-bg);
+
+      --radius:    var(--cyc-r-card);
+      --radius-sm: var(--cyc-r-field);
+      --shadow:    var(--cyc-shadow);
+      --transition: all var(--cyc-ease);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: var(--cyc-font);
       background: var(--bg-primary);
       color: var(--text-primary);
       min-height: 100vh;
@@ -90,12 +101,20 @@
     }
 
     .sidebar-logo {
-      font-size: 22px;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--accent), #ff7a2f);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--cyc-text);
+      letter-spacing: -0.3px;
+    }
+
+    .sidebar-logo svg {
+      width: 42px;
+      height: auto;
+      flex-shrink: 0;
+      color: var(--cyc-brand);
     }
 
     .sidebar-sub {
@@ -123,7 +142,7 @@
       border: 1px solid transparent;
       background: none;
       color: var(--text-secondary);
-      border-radius: var(--radius-sm);
+      border-radius: var(--cyc-r-pill);
       font-size: 13.5px;
       font-weight: 500;
       cursor: pointer;
@@ -138,26 +157,33 @@
     }
 
     .menu-item.active {
-      background: rgba(232, 101, 26, 0.08);
-      border-color: rgba(232, 101, 26, 0.2);
-      color: var(--accent);
+      background: var(--cyc-brand-soft);
+      border-color: var(--cyc-brand-line);
+      color: var(--cyc-brand-ink);
       font-weight: 600;
     }
 
     .menu-icon {
       margin-right: 12px;
-      font-size: 16px;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      stroke: currentColor;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
     }
 
     .badge-menu {
       margin-left: auto;
       font-size: 9px;
       font-weight: 700;
-      padding: 2px 6px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      color: var(--text-muted);
+      padding: 2px 8px;
+      background: var(--cyc-surface-3);
+      border: 1px solid var(--cyc-border);
+      border-radius: var(--cyc-r-pill);
+      color: var(--cyc-text-3);
       text-transform: uppercase;
     }
 
@@ -220,10 +246,37 @@
       flex: 1;
     }
 
+    .ico-xl {
+      width: 46px; height: 46px; stroke: currentColor; stroke-width: 1.4;
+      stroke-linecap: round; stroke-linejoin: round; fill: none;
+    }
+    .sdot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .status-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+    .res-icon { margin-bottom: 12px; }
+    .res-icon.ok  { color: var(--cyc-st-arrendado); }
+    .res-icon.bad { color: var(--cyc-st-fuera); }
+
+    /* ─── Íconos monolínea ────────────────────────────────────────
+       Mismo trazo y terminaciones que el logo: 1.75px, extremos redondos. */
+    .ico {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      stroke: currentColor;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      vertical-align: -3px;
+    }
+    .page-title .ico, h2 .ico { width: 20px; height: 20px; color: var(--cyc-text-3); }
+    .toast-icon { width: 17px; height: 17px; flex-shrink: 0; stroke: currentColor;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+
     /* ─── Buttons ────────────────────────────────────────────────── */
     .btn {
-      padding: 8px 16px;
-      border-radius: var(--radius-sm);
+      padding: 8px 18px;
+      border-radius: var(--cyc-r-pill);
       border: 1px solid var(--border);
       background: var(--bg-card);
       color: var(--text-primary);
@@ -251,17 +304,20 @@
 
     .btn-primary:hover {
       background: var(--accent-hover);
-      box-shadow: 0 0 20px var(--accent-glow);
+      box-shadow: 0 4px 12px var(--accent-glow);
     }
 
     .btn-sm {
-      padding: 5px 10px;
+      padding: 5px 13px;
       font-size: 12px;
     }
 
     .btn-icon {
-      padding: 6px 10px;
+      padding: 7px;
       font-size: 16px;
+      border-radius: var(--cyc-r-pill);
+      aspect-ratio: 1;
+      justify-content: center;
     }
 
     /* ─── KPI Bar ────────────────────────────────────────────────── */
@@ -298,7 +354,7 @@
     }
 
     .kpi-card:nth-child(1)::before { background: linear-gradient(90deg, #22c55e, #16a34a); }
-    .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, #e8651a, #ff7a2f); }
+    .kpi-card:nth-child(2)::before { background: linear-gradient(90deg, var(--cyc-brand-600), var(--cyc-brand-400)); }
     .kpi-card:nth-child(3)::before { background: linear-gradient(90deg, #ef4444, #dc2626); }
     .kpi-card:nth-child(4)::before { background: linear-gradient(90deg, #a855f7, #9333ea); }
 
@@ -452,7 +508,7 @@
       color: var(--text-secondary);
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      border-radius: var(--cyc-r-pill);
       cursor: pointer;
       transition: var(--transition);
     }
@@ -510,9 +566,9 @@
     }
 
     .legend-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 3px;
+      width: 10px;
+      height: 10px;
+      border-radius: var(--cyc-r-pill);
     }
 
     /* ─── Calendar Grid ─────────────────────────────────────────── */
@@ -527,16 +583,16 @@
 
     /* Destacado de hoy en calendario */
     .calendar-table th.today {
-      background: rgba(232, 101, 26, 0.12) !important;
-      color: var(--accent) !important;
-      border-bottom: 2px solid var(--accent) !important;
+      background: var(--cyc-hoy-bg) !important;
+      color: var(--cyc-hoy-line) !important;
+      border-bottom: 2px solid var(--cyc-hoy-line) !important;
       font-weight: 700;
     }
     .calendar-table td.today-col {
-      background: rgba(232, 101, 26, 0.035) !important;
+      background: rgba(26, 29, 35, 0.028) !important;
     }
     .day-cell.today-cell {
-      outline: 2px solid var(--accent) !important;
+      outline: 2px solid var(--cyc-hoy-line) !important;
       outline-offset: 1px;
     }
 
@@ -651,7 +707,7 @@
     .day-cell {
       width: 28px;
       height: 28px;
-      border-radius: 5px;
+      border-radius: var(--cyc-r-cell);
       margin: 0 auto;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -727,7 +783,7 @@
     .modal {
       background: var(--bg-modal);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: var(--cyc-r-card);
       width: 420px;
       max-width: 95vw;
       box-shadow: 0 24px 64px rgba(0,0,0,0.6);
@@ -888,9 +944,9 @@
     }
 
     .empty-state .empty-icon {
-      font-size: 48px;
       margin-bottom: 16px;
-      opacity: 0.5;
+      color: var(--cyc-text-3);
+      opacity: 0.75;
     }
 
     .empty-state h3 {
@@ -954,7 +1010,7 @@
     .coming-soon-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: var(--cyc-r-card);
       padding: 40px;
       max-width: 480px;
       text-align: center;
@@ -963,8 +1019,8 @@
     }
     
     .cs-icon {
-      font-size: 54px;
       margin-bottom: 20px;
+      color: var(--cyc-text-3);
     }
     
     .coming-soon-card h2 {
@@ -977,11 +1033,11 @@
       display: inline-block;
       font-size: 11px;
       font-weight: 700;
-      color: var(--accent);
-      background: rgba(232, 101, 26, 0.1);
-      border: 1px solid rgba(232, 101, 26, 0.2);
-      padding: 4px 10px;
-      border-radius: 20px;
+      color: var(--cyc-brand-ink);
+      background: var(--cyc-brand-soft);
+      border: 1px solid var(--cyc-brand-line);
+      padding: 4px 12px;
+      border-radius: var(--cyc-r-pill);
       text-transform: uppercase;
       margin-bottom: 20px;
     }
@@ -1059,11 +1115,11 @@
       align-items: center;
       gap: 8px;
       padding: 6px 14px;
-      background: rgba(232, 101, 26, 0.1);
-      color: #E8651A !important;
-      border: 1px solid rgba(232, 101, 26, 0.3);
-      border-radius: 20px;
-      font-family: 'Inter', sans-serif;
+      background: var(--cyc-brand-soft);
+      color: var(--cyc-brand-ink) !important;
+      border: 1px solid var(--cyc-brand-line);
+      border-radius: var(--cyc-r-pill);
+      font-family: var(--cyc-font);
       font-size: 12px;
       font-weight: 600;
       text-decoration: none;
@@ -1071,9 +1127,9 @@
       line-height: 1;
     }
     .btn-volver-hub:hover {
-      background: #E8651A;
+      background: var(--cyc-brand);
       color: #ffffff !important;
-      box-shadow: 0 4px 12px rgba(232, 101, 26, 0.2);
+      box-shadow: 0 4px 12px var(--cyc-brand-glow);
       transform: translateY(-1px);
     }
     .btn-volver-hub svg {
@@ -1088,31 +1144,106 @@
     <!-- ─── Sidebar ───────────────────────────────────────────────── -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">CyC Ops</div>
+        <div class="sidebar-logo">
+          <svg viewBox="524.5 501 1350.2 807" fill="currentColor" role="img" aria-label="Transportes CyC">
+            <g transform="translate(0,1600) scale(0.1,-0.1)"><path d="M12170 12429 c-60 -11 -117 -32 -141 -53 -11 -9 -24 -16 -29 -16
+-6 0 -10 -4 -10 -10 0 -5 -6 -10 -14 -10 -7 0 -21 -11 -30 -25 -26 -40 -36
+-29 -36 40 l0 66 -137 -3 -138 -3 -3 -717 -2 -718 -1483 -1 c-815 0 -1489 -2
+-1497 -3 -8 -2 -75 -6 -149 -10 -74 -4 -137 -8 -140 -10 -3 -2 -35 -6 -71 -10
+-95 -8 -281 -43 -390 -72 -52 -14 -104 -27 -115 -30 -28 -5 -265 -83 -290 -94
+-11 -5 -45 -18 -75 -30 -220 -85 -484 -229 -710 -387 -558 -391 -1016 -978
+-1242 -1588 -16 -44 -36 -96 -43 -115 -76 -200 -151 -559 -172 -825 -13 -170
+-9 -1086 5 -1210 41 -344 105 -601 234 -935 29 -73 161 -345 192 -395 14 -22
+30 -49 35 -61 10 -23 79 -130 136 -209 19 -27 43 -61 53 -75 9 -13 37 -49 62
+-80 24 -30 48 -59 52 -65 119 -158 505 -520 648 -610 25 -15 47 -31 50 -34 3
+-4 32 -24 65 -45 33 -22 79 -52 103 -68 24 -15 49 -28 56 -28 8 0 16 -7 20
+-15 3 -8 9 -14 13 -13 4 1 26 -9 48 -23 22 -13 42 -24 45 -24 3 0 30 -14 60
+-31 50 -29 77 -42 195 -95 167 -75 484 -180 518 -171 4 1 7 -2 7 -7 0 -8 19
+-13 108 -25 18 -3 37 -8 44 -12 6 -4 21 -8 32 -10 12 -1 46 -7 76 -13 30 -6
+71 -13 90 -15 19 -2 55 -7 80 -11 91 -12 127 -16 210 -20 47 -3 119 -7 160 -9
+41 -3 535 -5 1098 -6 l1023 0 -59 -112 c-211 -401 -225 -431 -206 -445 14 -10
+113 -13 460 -13 434 0 442 0 468 21 25 19 89 140 240 446 l50 103 1770 0 c974
+0 1812 2 1861 5 135 8 213 13 285 22 36 4 68 6 72 5 4 -1 31 3 60 8 29 6 67
+13 83 15 17 2 41 7 55 10 14 3 48 10 75 16 116 25 238 55 265 66 16 7 25 9 55
+17 54 14 209 71 290 107 23 10 53 21 68 24 15 4 27 12 27 18 0 6 3 8 6 4 7 -6
+240 108 267 131 9 8 17 12 17 8 0 -17 387 239 467 309 6 5 31 26 54 45 171
+139 406 382 533 549 83 110 236 333 236 345 0 3 15 29 33 58 75 118 208 410
+262 572 76 230 120 411 156 646 22 136 23 180 25 715 3 604 -1 673 -41 910
+-31 185 -61 306 -120 495 -56 175 -204 506 -280 626 -19 30 -35 56 -35 59 0
+13 -176 271 -218 321 -5 6 -31 39 -57 73 -53 70 -228 263 -297 327 -69 65
+-151 137 -192 169 -21 17 -66 53 -100 80 -66 53 -290 206 -366 248 -81 46
+-355 184 -380 192 -14 4 -43 16 -65 25 -122 54 -342 129 -430 146 -11 2 -65
+15 -120 29 -94 23 -234 50 -317 60 -107 14 -221 23 -283 25 -38 0 -79 3 -90 5
+-11 2 -791 4 -1732 4 l-1713 1 0 241 0 240 48 -40 c184 -155 450 -143 622 29
+132 132 187 347 145 567 -54 283 -294 461 -555 412z m116 -274 c168 -68 220
+-339 94 -487 -129 -150 -346 -117 -443 66 -27 52 -30 209 -4 266 66 148 212
+212 353 155z m3104 -1957 c397 -71 601 -134 895 -278 906 -444 1510 -1305
+1614 -2300 26 -248 11 -735 -29 -980 -55 -330 -199 -709 -380 -1001 -433 -699
+-1126 -1178 -1940 -1338 -258 -51 -236 -51 -1888 -51 -1485 0 -1543 1 -1538
+18 4 10 28 58 54 108 64 120 304 602 573 1149 122 248 372 754 556 1125 185
+371 367 740 405 820 39 80 104 215 145 300 156 322 328 519 578 663 235 136
+555 205 795 173 284 -37 451 -124 868 -449 34 -27 69 -47 76 -45 8 2 63 50
+123 107 180 174 355 342 426 409 37 35 67 68 67 73 0 6 -15 22 -32 37 -18 15
+-73 63 -123 107 -77 69 -178 151 -275 223 -108 81 -299 189 -428 243 -54 22
+-104 43 -112 48 -12 7 -103 36 -145 47 -5 1 -46 12 -90 24 -44 11 -91 23 -105
+25 -14 2 -52 9 -85 16 -69 14 -450 18 -567 6 -171 -17 -431 -85 -587 -153
+-365 -160 -615 -343 -848 -619 -172 -204 -308 -435 -478 -810 -10 -22 -42 -91
+-72 -153 -29 -63 -53 -115 -53 -117 0 -1 -25 -56 -56 -120 -59 -125 -179 -382
+-221 -475 -14 -30 -48 -102 -75 -160 -28 -58 -63 -132 -78 -165 -245 -530
+-268 -575 -295 -575 -28 0 31 -114 -880 1695 -213 424 -410 814 -436 868 -27
+53 -52 97 -56 97 -5 -1 -52 -90 -106 -198 -54 -108 -156 -310 -226 -448 -100
+-196 -128 -259 -126 -285 3 -39 42 -121 470 -984 809 -1633 865 -1748 865
+-1782 -1 -16 -90 -206 -203 -433 l-202 -405 -1175 -3 c-1195 -3 -1242 -2
+-1465 34 -1008 166 -1866 853 -2238 1790 -50 128 -87 236 -108 324 -77 311
+-89 417 -89 834 0 398 8 493 67 746 54 228 125 426 230 635 447 889 1336 1498
+2328 1594 50 5 1550 8 3335 7 2992 -2 3252 -3 3340 -18z  M8860 9488 c-3 -3
+-43 -8 -90 -11 -361 -26 -789 -204 -1107 -460 -79 -65 -268 -256 -307 -313
+-265 -383 -377 -671 -448 -1149 -21 -145 -15 -492 11 -640 86 -480 330 -928
+693 -1271 41 -39 102 -91 134 -114 32 -24 82 -61 110 -82 28 -21 54 -38 57
+-38 3 0 23 -11 43 -25 125 -85 453 -221 624 -260 8 -1 35 -8 60 -15 25 -7 56
+-14 70 -16 14 -2 43 -8 65 -14 142 -34 490 -38 650 -6 11 2 42 7 69 11 55 7
+275 67 321 86 17 7 32 13 35 13 101 20 479 234 614 348 178 149 226 203 226
+251 0 21 -92 206 -243 490 -25 45 -66 123 -92 172 -26 50 -49 91 -50 93 -1 1
+-58 -43 -126 -99 -307 -251 -463 -353 -664 -432 -254 -99 -539 -105 -790 -17
+-421 149 -730 460 -858 865 -71 226 -75 388 -16 754 52 328 353 698 700 860
+202 95 363 132 565 132 209 -1 320 -28 573 -138 85 -37 106 -42 116 -31 6 7
+70 112 140 233 71 121 166 285 213 365 103 175 112 192 112 206 0 11 -52 31
+-295 114 -141 49 -292 83 -415 95 -109 10 -132 13 -205 25 -73 11 -486 26
+-495 18z  M13768 6168 c-106 -211 -198 -398 -205
+-416 -15 -41 -8 -81 20 -114 51 -59 249 -204 387 -284 77 -45 126 -69 270
+-132 100 -44 333 -113 430 -127 25 -4 47 -8 50 -10 4 -2 35 -6 70 -10 34 -3
+67 -8 71 -11 4 -2 77 -7 161 -9 138 -4 191 -1 353 20 63 8 263 53 284 64 9 5
+31 11 49 14 70 14 393 153 412 178 3 3 15 9 27 13 22 7 228 142 274 180 14 11
+38 30 53 41 82 58 326 272 326 285 0 17 -601 600 -619 600 -11 0 -61 -36 -113
+-81 -235 -204 -404 -306 -628 -379 -261 -85 -482 -81 -775 16 -265 88 -480
+249 -648 487 -23 31 -45 57 -49 57 -4 0 -94 -172 -200 -382z "/></g>
+          </svg>
+          <span>Ops</span>
+        </div>
         <div class="sidebar-sub">Gestión Operacional</div>
       </div>
       
       <nav class="sidebar-menu">
         <button class="menu-item active" data-tab="calendario" onclick="switchTab('calendario')">
-          <span class="menu-icon">🗓️</span> Calendario de Flota
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2.5"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Calendario de Flota
         </button>
         <button class="menu-item" data-tab="dashboard" onclick="switchTab('dashboard')">
-          <span class="menu-icon">📊</span> Dashboard de Operación
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Dashboard de Operación
         </button>
         <button class="menu-item" data-tab="inspecciones" onclick="switchTab('inspecciones')">
-          <span class="menu-icon">📋</span> Inspección de Equipos
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg> Inspección de Equipos
         </button>
         <button class="menu-item" data-tab="mecanicos" onclick="switchTab('mecanicos')">
-          <span class="menu-icon">🔧</span> Cal. Mecánicos
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Cal. Mecánicos
         </button>
         <button class="menu-item" data-tab="ordenes" onclick="switchTab('ordenes')">
-          <span class="menu-icon">📝</span> Órdenes de Trabajo <span class="badge-menu">Soon</span>
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Órdenes de Trabajo <span class="badge-menu">Soon</span>
         </button>
         <button class="menu-item" data-tab="mantenciones" onclick="switchTab('mantenciones')">
-          <span class="menu-icon">🛠️</span> Mantenciones
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg> Mantenciones
         </button>
         <button class="menu-item" data-tab="equipos" onclick="switchTab('equipos')">
-          <span class="menu-icon">⚙️</span> Gestión de Recursos
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg> Gestión de Recursos
         </button>
       </nav>
       
@@ -1135,10 +1266,10 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
               Volver al Hub
             </a>
-            <h1 class="page-title" style="margin: 0;">🗓️ Calendario Operacional de Flota</h1>
+            <h1 class="page-title" style="margin: 0;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2.5"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> Calendario Operacional de Flota</h1>
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="btn btn-sm btn-primary" id="btnSync" onclick="syncFromHub()">🔄 Sincronizar Hub</button>
+            <button class="btn btn-sm btn-primary" id="btnSync" onclick="syncFromHub()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 12a9 9 0 0 1 15-6.7L21 8"/></svg> Sincronizar Hub</button>
           </div>
         </div>
         
@@ -1206,10 +1337,10 @@
         <!-- Calendar Container -->
         <div class="calendar-container" id="calendarContainer">
           <div class="empty-state" id="emptyState">
-            <div class="empty-icon">📋</div>
+            <div class="empty-icon"><svg class="ico-xl" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
             <h3>Sin equipos registrados</h3>
             <p>Sincroniza la flota desde el Hub o agrega equipos manualmente desde Configuración.</p>
-            <button class="btn btn-primary" onclick="syncFromHub()">🔄 Sincronizar desde Hub</button>
+            <button class="btn btn-primary" onclick="syncFromHub()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 12a9 9 0 0 1 15-6.7L21 8"/></svg> Sincronizar desde Hub</button>
           </div>
         </div>
       </div>
@@ -1217,14 +1348,14 @@
       <!-- PANEL: DASHBOARD DE OPERACIÓN -->
       <div class="tab-panel" id="panel-dashboard">
         <div class="content-header">
-          <h1 class="page-title">📊 Dashboard de Operación y Flota</h1>
+          <h1 class="page-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Dashboard de Operación y Flota</h1>
           <div style="display:flex; gap:8px;">
             <div class="month-nav" style="margin-bottom:0;">
               <button onclick="changeMonthDashboard(-1)">‹</button>
               <div class="month-label" id="monthLabelDashboard"></div>
               <button onclick="changeMonthDashboard(1)">›</button>
             </div>
-            <button class="btn btn-sm btn-primary" onclick="loadDashboardData()">🔄 Refrescar</button>
+            <button class="btn btn-sm btn-primary" onclick="loadDashboardData()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 2v6h-6M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 12a9 9 0 0 1 15-6.7L21 8"/></svg> Refrescar</button>
           </div>
         </div>
         
@@ -1257,14 +1388,14 @@
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:24px;">
             <!-- Chart 1: Utilización Diaria -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
-              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">📈 Tendencia de Utilización Diaria</h3>
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg> Tendencia de Utilización Diaria</h3>
               <div style="height:250px; position:relative;">
                 <canvas id="chartUtilizacionDiaria"></canvas>
               </div>
             </div>
             <!-- Chart 2: Estado de Flota -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
-              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">🍕 Distribución de Estados</h3>
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.2 15.9A10 10 0 1 1 8 2.8"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg> Distribución de Estados</h3>
               <div style="height:250px; position:relative; display:flex; justify-content:center; align-items:center;">
                 <canvas id="chartEstadoFlota"></canvas>
               </div>
@@ -1274,14 +1405,14 @@
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:24px;">
             <!-- Left: Top Clientes -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
-              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">🏢 Días de Arriendo por Cliente</h3>
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01"/></svg> Días de Arriendo por Cliente</h3>
               <div style="height:250px; position:relative;">
                 <canvas id="chartClientesArriendo"></canvas>
               </div>
             </div>
             <!-- Right: Detenciones / Fuera de servicio details -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow); display:flex; flex-direction:column;">
-              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">⚠️ Detalle de Equipos Fuera de Servicio / En Taller</h3>
+              <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg> Detalle de Equipos Fuera de Servicio / En Taller</h3>
               <div style="flex:1; overflow-y:auto; max-height:250px;">
                 <table class="calendar-table" style="width:100%; min-width:unset; font-size:12px; border-collapse:collapse;">
                   <thead>
@@ -1301,7 +1432,7 @@
 
           <!-- Bottom: Resumen Operacional de Mecánicos en el mes -->
           <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);">
-            <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;">🔧 Cobertura y Despliegue de Mecánicos por Ubicación</h3>
+            <h3 style="font-size:14px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Cobertura y Despliegue de Mecánicos por Ubicación</h3>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px;">
               <div style="height:220px; position:relative;">
                 <canvas id="chartMecanicosUbicaciones"></canvas>
@@ -1333,7 +1464,7 @@
       <!-- PANEL: CALENDARIO DE MECÁNICOS -->
       <div class="tab-panel" id="panel-mecanicos">
         <div class="content-header">
-          <h1 class="page-title">🔧 Calendario Operacional de Mecánicos</h1>
+          <h1 class="page-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Calendario Operacional de Mecánicos</h1>
         </div>
         
         <!-- KPI Bar -->
@@ -1412,7 +1543,7 @@
         <!-- Calendar Container -->
         <div class="calendar-container" id="calendarContainerMec">
           <div class="empty-state" id="emptyStateMec">
-            <div class="empty-icon" id="emptyIconMec">🔧</div>
+            <div class="empty-icon" id="emptyIconMec"><svg class="ico-xl" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
             <h3 id="emptyTitleMec">Sin mecánicos registrados</h3>
             <p id="emptyTextMec">Registra mecánicos en la pestaña de Gestión de Recursos.</p>
           </div>
@@ -1420,7 +1551,7 @@
 
         <!-- Summary Table Section -->
         <div style="margin-top: 30px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow);">
-          <h2 style="font-size: 16px; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">📊 Resumen Mensual por Mecánico</h2>
+          <h2 style="font-size: 16px; font-weight: 800; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Resumen Mensual por Mecánico</h2>
           <div style="overflow-x: auto;">
             <table class="calendar-table" style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -1444,11 +1575,11 @@
       <!-- PANEL: ÓRDENES DE TRABAJO -->
       <div class="tab-panel" id="panel-ordenes">
         <div class="content-header">
-          <h1 class="page-title">📝 Órdenes de Trabajo</h1>
+          <h1 class="page-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Órdenes de Trabajo</h1>
         </div>
         <div class="coming-soon-panel">
           <div class="coming-soon-card">
-            <div class="cs-icon">📝</div>
+            <div class="cs-icon"><svg class="ico-xl" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></div>
             <h2>Órdenes de Trabajo</h2>
             <p class="cs-badge">Próximamente</p>
             <p class="cs-desc">
@@ -1461,7 +1592,7 @@
       <!-- PANEL: GESTIÓN DE RECURSOS -->
       <div class="tab-panel" id="panel-equipos">
         <div class="content-header">
-          <h1 class="page-title">⚙️ Gestión de Recursos Operacionales</h1>
+          <h1 class="page-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg> Gestión de Recursos Operacionales</h1>
         </div>
         <div class="tab-content-inner">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 28px;">
@@ -1469,7 +1600,7 @@
             <!-- MECÁNICOS MANAGEMENT -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🔧 Agregar Nuevo Mecánico</h3>
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Agregar Nuevo Mecánico</h3>
                 <div style="display:flex; flex-direction:column; gap:12px;">
                   <div>
                     <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Nombre Completo</label>
@@ -1487,7 +1618,7 @@
             <!-- UBICACIONES MANAGEMENT -->
             <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">📍 Agregar Nueva Ubicación</h3>
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Agregar Nueva Ubicación</h3>
                 <div style="display:flex; flex-direction:column; gap:12px;">
                   <div>
                     <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Nombre de Ubicación / Faena</label>
@@ -1502,7 +1633,7 @@
 
           <!-- EQUIPOS MANAGEMENT -->
           <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-bottom:28px; box-shadow:var(--shadow);">
-            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🚜 Agregar Nuevo Equipo</h3>
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 18V6a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-1"/><circle cx="6.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg> Agregar Nuevo Equipo</h3>
             <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap;">
               <div>
                 <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">N° Interno</label>
@@ -1524,16 +1655,16 @@
           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
             <!-- LEFT: EQUIPOS AND MECÁNICOS LIST -->
             <div>
-              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🚜 Equipos del Parque</h3>
+              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 18V6a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-1"/><circle cx="6.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg> Equipos del Parque</h3>
               <div class="equipo-list" id="equipoList" style="margin-bottom: 30px;"></div>
 
-              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">🔧 Personal de Mecánicos</h3>
+              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Personal de Mecánicos</h3>
               <div class="equipo-list" id="mecanicoList"></div>
             </div>
 
             <!-- RIGHT: UBICACIONES LIST -->
             <div>
-              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">📍 Ubicaciones Habilitadas</h3>
+              <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> Ubicaciones Habilitadas</h3>
               <div class="equipo-list" id="ubicacionList" style="grid-template-columns: 1fr;"></div>
             </div>
           </div>
@@ -1544,7 +1675,7 @@
       <!-- PANEL: MANTENCIONES -->
       <div class="tab-panel" id="panel-mantenciones">
         <div class="content-header">
-          <h1 class="page-title">🛠️ Mantenciones de Equipos</h1>
+          <h1 class="page-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg> Mantenciones de Equipos</h1>
         </div>
 
         <!-- KPI Bar -->
@@ -1566,7 +1697,7 @@
           </div>
           <div class="kpi-card">
             <div class="kpi-label">Sin Registro</div>
-            <div class="kpi-value" id="kpiMantSinDatos" style="color:#94a3b8;">—</div>
+            <div class="kpi-value" id="kpiMantSinDatos" style="color:var(--cyc-text-3);">—</div>
             <div class="kpi-sub">sin mantención registrada</div>
           </div>
         </div>
@@ -1575,7 +1706,7 @@
           <div class="controls" style="margin-bottom:16px;">
             <div class="controls-left">
               <button class="btn btn-primary" onclick="openMantencionModal()">+ Agregar Mantención</button>
-              <button class="btn btn-sm" onclick="document.getElementById('mantImportFile').click()">⬆️ Cargar Excel Histórico</button>
+              <button class="btn btn-sm" onclick="document.getElementById('mantImportFile').click()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg> Cargar Excel Histórico</button>
               <input type="file" id="mantImportFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="importMantencionesExcel(event)">
             </div>
           </div>
@@ -1602,7 +1733,7 @@
 
           <!-- CONFIG: TIPOS DE MANTENCIÓN -->
           <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:24px; margin-top:28px; box-shadow:var(--shadow);">
-            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;">⚙️ Tipos de Mantención e Intervalos</h3>
+            <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg> Tipos de Mantención e Intervalos</h3>
             <div style="display:flex; gap:12px; align-items:end; flex-wrap:wrap; margin-bottom:16px;">
               <div>
                 <label style="display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:600;">Nombre</label>
@@ -1684,12 +1815,12 @@
       <div class="modal-body">
         <label>Estado</label>
         <div class="status-grid" id="statusGrid">
-          <button class="status-btn" data-status="arrendado" onclick="selectStatus('arrendado')">🟢 Arrendado</button>
-          <button class="status-btn" data-status="fuera_servicio" onclick="selectStatus('fuera_servicio')">🔴 Fuera Serv.</button>
-          <button class="status-btn" data-status="mantencion" onclick="selectStatus('mantencion')">🟡 Mantención</button>
+          <button class="status-btn" data-status="arrendado" onclick="selectStatus('arrendado')"><span class="sdot" style="background:var(--cyc-st-arrendado)"></span>Arrendado</button>
+          <button class="status-btn" data-status="fuera_servicio" onclick="selectStatus('fuera_servicio')"><span class="sdot" style="background:var(--cyc-st-fuera)"></span>Fuera Serv.</button>
+          <button class="status-btn" data-status="mantencion" onclick="selectStatus('mantencion')"><span class="sdot" style="background:var(--cyc-st-mantencion)"></span>Mantención</button>
           <button class="status-btn" data-status="disponible" onclick="selectStatus('disponible')">⚪ Disponible</button>
-          <button class="status-btn" data-status="uso_interno" onclick="selectStatus('uso_interno')">🔵 Uso Interno</button>
-          <button class="status-btn" data-status="en_taller" onclick="selectStatus('en_taller')">🟣 En Taller</button>
+          <button class="status-btn" data-status="uso_interno" onclick="selectStatus('uso_interno')"><span class="sdot" style="background:var(--cyc-st-interno)"></span>Uso Interno</button>
+          <button class="status-btn" data-status="en_taller" onclick="selectStatus('en_taller')"><span class="sdot" style="background:var(--cyc-st-taller)"></span>En Taller</button>
         </div>
 
         <label>Cliente</label>
@@ -1707,7 +1838,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveCell()">💾 Guardar</button>
+        <button class="btn btn-primary" onclick="saveCell()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar</button>
       </div>
     </div>
   </div>
@@ -1725,13 +1856,13 @@
       <div class="modal-body">
         <label>Estado del Turno</label>
         <div class="status-grid" id="mecStatusGrid" style="grid-template-columns: repeat(3, 1fr);">
-          <button class="status-btn" data-status="trabajado" onclick="selectStatusMec('trabajado')">🟢 Trabajado</button>
-          <button class="status-btn" data-status="extra" onclick="selectStatusMec('extra')">🔵 Día Extra</button>
-          <button class="status-btn" data-status="subida" onclick="selectStatusMec('subida')">🟠 Subida</button>
-          <button class="status-btn" data-status="bajada" onclick="selectStatusMec('bajada')">🟤 Bajada</button>
+          <button class="status-btn" data-status="trabajado" onclick="selectStatusMec('trabajado')"><span class="sdot" style="background:var(--cyc-st-arrendado)"></span>Trabajado</button>
+          <button class="status-btn" data-status="extra" onclick="selectStatusMec('extra')"><span class="sdot" style="background:var(--cyc-st-interno)"></span>Día Extra</button>
+          <button class="status-btn" data-status="subida" onclick="selectStatusMec('subida')"><span class="sdot" style="background:var(--cyc-mec-subida)"></span>Subida</button>
+          <button class="status-btn" data-status="bajada" onclick="selectStatusMec('bajada')"><span class="sdot" style="background:var(--cyc-mec-bajada)"></span>Bajada</button>
           <button class="status-btn" data-status="descanso" onclick="selectStatusMec('descanso')">⚪ Descanso</button>
-          <button class="status-btn" data-status="licencia" onclick="selectStatusMec('licencia')">🔴 Licencia</button>
-          <button class="status-btn" data-status="vacaciones" onclick="selectStatusMec('vacaciones')" style="grid-column: span 3;">🟡 Vacaciones</button>
+          <button class="status-btn" data-status="licencia" onclick="selectStatusMec('licencia')"><span class="sdot" style="background:var(--cyc-st-fuera)"></span>Licencia</button>
+          <button class="status-btn" data-status="vacaciones" onclick="selectStatusMec('vacaciones')" style="grid-column: span 3;"><span class="sdot" style="background:var(--cyc-st-mantencion)"></span>Vacaciones</button>
         </div>
 
         <label>Ubicación / Faena</label>
@@ -1744,7 +1875,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeMecModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveMecCell()">💾 Guardar</button>
+        <button class="btn btn-primary" onclick="saveMecCell()"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg> Guardar</button>
       </div>
     </div>
   </div>
@@ -2248,7 +2379,7 @@
             })
           });
           if (!res.ok) throw new Error('Error batch');
-          toast(`✅ ${editingCell.fechas.length} días actualizados`, 'success');
+          toast(`${editingCell.fechas.length} días actualizados`, 'success');
         } else {
           const res = await fetch('/api/calendario', {
             method: 'PUT',
@@ -2256,7 +2387,7 @@
             body: JSON.stringify({ equipo_id: editingCell.equipo_id, fecha: editingCell.fecha, ...payload })
           });
           if (!res.ok) throw new Error('Error saving');
-          toast('✅ Registro guardado', 'success');
+          toast('Registro guardado', 'success');
         }
 
         closeModal();
@@ -2264,7 +2395,7 @@
         await loadStats();
         renderCalendar();
       } catch (e) {
-        toast('❌ Error guardando: ' + e.message, 'error');
+        toast('Error guardando: ' + e.message, 'error');
       }
     }
 
@@ -2313,7 +2444,7 @@
       const id = document.getElementById('newEquipoId').value.trim();
       const tipo = document.getElementById('newEquipoTipo').value.trim();
       const patente = document.getElementById('newEquipoPatente').value.trim();
-      if (!id) return toast('⚠️ N° interno requerido', 'error');
+      if (!id) return toast('N° interno requerido', 'error');
 
       try {
         const res = await fetch('/api/equipos', {
@@ -2325,10 +2456,10 @@
         document.getElementById('newEquipoId').value = '';
         document.getElementById('newEquipoTipo').value = '';
         document.getElementById('newEquipoPatente').value = '';
-        toast('✅ Equipo agregado', 'success');
+        toast('Equipo agregado', 'success');
         await loadAll();
       } catch (e) {
-        toast('❌ Error: ' + e.message, 'error');
+        toast('Error: ' + e.message, 'error');
       }
     }
 
@@ -2336,10 +2467,10 @@
       if (!confirm('¿Eliminar este equipo del parque?')) return;
       try {
         await fetch(`/api/equipos/${id}`, { method: 'DELETE' });
-        toast('🗑️ Equipo eliminado', 'success');
+        toast('Equipo eliminado', 'success');
         await loadAll();
       } catch (e) {
-        toast('❌ Error: ' + e.message, 'error');
+        toast('Error: ' + e.message, 'error');
       }
     }
 
@@ -2355,7 +2486,7 @@
         if (!res.ok) throw new Error(data.error || 'Error de sincronización');
 
         document.getElementById('syncStatus').innerHTML = `
-          <div style="font-size:40px;margin-bottom:12px;">✅</div>
+          <div class="res-icon ok"><svg class="ico-xl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></div>
           <p style="font-weight:600;font-size:16px;margin-bottom:8px;">Sincronización exitosa</p>
           <p style="color:var(--text-secondary);">${data.synced} equipos sincronizados</p>
           ${data.contractsFilled ? `<p style="color:var(--text-secondary);">${data.contractsFilled} días-equipo pre-llenados desde contratos activos</p>` : ''}
@@ -2363,7 +2494,7 @@
         `;
       } catch (e) {
         document.getElementById('syncStatus').innerHTML = `
-          <div style="font-size:40px;margin-bottom:12px;">❌</div>
+          <div class="res-icon bad"><svg class="ico-xl" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
           <p style="font-weight:600;font-size:16px;margin-bottom:8px;">Error de sincronización</p>
           <p style="color:var(--st-fuera-servicio);">${e.message}</p>
           <p style="color:var(--text-muted);font-size:12px;margin-top:8px;">Verifica que cyc-hub esté corriendo y accesible.</p>
@@ -2385,9 +2516,16 @@
         tipos.map(t => `<option value="${t}"${t === current ? ' selected' : ''}>${t}</option>`).join('');
     }
 
+    const ICONO_TOAST = {
+      success: '<path d="m5 13 4 4L19 7"/>',
+      error:   '<path d="M18 6 6 18M6 6l12 12"/>',
+      warn:    '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+    };
+
     function toast(msg, type = 'success') {
       const el = document.getElementById('toast');
-      el.textContent = msg;
+      el.innerHTML = `<svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true">${ICONO_TOAST[type] || ICONO_TOAST.success}</svg><span></span>`;
+      el.querySelector('span').textContent = msg;
       el.className = 'toast ' + type;
       setTimeout(() => el.classList.add('show'), 10);
       setTimeout(() => el.classList.remove('show'), 3000);
@@ -2614,7 +2752,8 @@
 
       if (filtered.length === 0) {
         const sinRegistrar = mecanicos.length === 0;
-        document.getElementById('emptyIconMec').textContent = sinRegistrar ? '🔧' : '🔍';
+        document.getElementById('emptyIconMec').innerHTML =
+          `<svg class="ico-xl" viewBox="0 0 24 24" aria-hidden="true">${sinRegistrar ? '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>' : '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>'}</svg>`;
         document.getElementById('emptyTitleMec').textContent = sinRegistrar
           ? 'Sin mecánicos registrados'
           : 'Ningún mecánico coincide con los filtros';
@@ -2838,7 +2977,7 @@
             })
            });
            if (!res.ok) throw new Error('Error al guardar registros agrupados');
-           toast(`✅ ${editingCellMec.fechas.length} días guardados`, 'success');
+           toast(`${editingCellMec.fechas.length} días guardados`, 'success');
         } else {
           const res = await fetch('/api/calendario/mecanicos', {
             method: 'PUT',
@@ -2852,7 +2991,7 @@
             })
           });
           if (!res.ok) throw new Error('Error al guardar registro diario');
-          toast('✅ Registro guardado', 'success');
+          toast('Registro guardado', 'success');
         }
 
         closeMecModal();
@@ -2861,7 +3000,7 @@
         renderCalendarMec();
       } catch (e) {
         console.error('Error saving shift:', e);
-        toast('❌ Error guardando: ' + e.message, 'error');
+        toast('Error guardando: ' + e.message, 'error');
       }
     }
 
@@ -2930,7 +3069,7 @@
     async function addMecanico() {
       const nombre = document.getElementById('newMecanicoNombre').value.trim();
       const rol = document.getElementById('newMecanicoRol').value.trim();
-      if (!nombre) return toast('⚠️ Nombre requerido', 'error');
+      if (!nombre) return toast('Nombre requerido', 'error');
 
       try {
         const res = await fetch('/api/mecanicos', {
@@ -2942,10 +3081,10 @@
         
         document.getElementById('newMecanicoNombre').value = '';
         document.getElementById('newMecanicoRol').value = '';
-        toast('✅ Mecánico agregado', 'success');
+        toast('Mecánico agregado', 'success');
         await loadMecanicos();
       } catch (e) {
-        toast('❌ Error: ' + e.message, 'error');
+        toast('Error: ' + e.message, 'error');
       }
     }
 
@@ -2954,16 +3093,16 @@
       try {
         const res = await fetch(`/api/mecanicos/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error al dar de baja');
-        toast('🗑️ Mecánico dado de baja', 'success');
+        toast('Mecánico dado de baja', 'success');
         await loadMecanicos();
       } catch (e) {
-        toast('❌ Error: ' + e.message, 'error');
+        toast('Error: ' + e.message, 'error');
       }
     }
 
     async function addUbicacion() {
       const nombre = document.getElementById('newUbicacionNombre').value.trim();
-      if (!nombre) return toast('⚠️ Nombre de ubicación requerido', 'error');
+      if (!nombre) return toast('Nombre de ubicación requerido', 'error');
 
       try {
         const res = await fetch('/api/ubicaciones', {
@@ -2974,10 +3113,10 @@
         if (!res.ok) throw new Error('Error al agregar ubicación');
 
         document.getElementById('newUbicacionNombre').value = '';
-        toast('✅ Ubicación agregada', 'success');
+        toast('Ubicación agregada', 'success');
         await loadUbicaciones();
       } catch (e) {
-        toast('❌ Error: ' + e.message, 'error');
+        toast('Error: ' + e.message, 'error');
       }
     }
 
@@ -3028,7 +3167,7 @@
         
       } catch (e) {
         console.error(e);
-        toast('❌ Error cargando dashboard: ' + e.message, 'error');
+        toast('Error cargando dashboard: ' + e.message, 'error');
       }
     }
 
@@ -3057,13 +3196,15 @@
           datasets: [{
             label: 'Equipos Arrendados',
             data: dataPoints,
-            borderColor: '#e8651a',
-            backgroundColor: 'rgba(232, 101, 26, 0.05)',
+            borderColor: CYC('--cyc-brand'),
+            backgroundColor: 'rgba(239, 120, 52, 0.07)',
             borderWidth: 2.5,
             fill: true,
             tension: 0.35,
-            pointBackgroundColor: '#e8651a',
-            pointRadius: 3,
+            pointBackgroundColor: CYC('--cyc-brand'),
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: c => c.dataIndex === c.dataset.data.length - 1 ? 5 : 0,
             pointHoverRadius: 5
           }]
         },
@@ -3077,17 +3218,22 @@
             y: {
               beginAtZero: true,
               max: Math.max(data.totalEquipos, 5),
-              ticks: { stepSize: 1, color: '#94a3b8' },
-              grid: { color: '#f1f5f9' }
+              ticks: { stepSize: 1, color: CYC('--cyc-text-3') },
+              grid: { color: REJILLA }
             },
             x: {
-              ticks: { color: '#94a3b8' },
+              ticks: { color: CYC('--cyc-text-3') },
               grid: { display: false }
             }
           }
         }
       });
     }
+
+    // Los gráficos toman sus colores de cyc-tokens.css. Si cambia un estado
+    // en el sistema, el gráfico cambia solo.
+    const CYC = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const REJILLA = 'rgba(26, 29, 35, 0.06)';
 
     function renderEstadoFlotaChart(byEstado) {
       const ctx = document.getElementById('chartEstadoFlota').getContext('2d');
@@ -3103,12 +3249,12 @@
       ];
       
       const colors = [
-        '#22c55e', // arrendado
-        '#64748b', // disponible
-        '#d97706', // mantencion
-        '#ef4444', // fuera_servicio
-        '#e8651a', // uso_interno
-        '#a855f7'  // en_taller
+        CYC('--cyc-st-arrendado'),
+        CYC('--cyc-st-disponible'),
+        CYC('--cyc-st-mantencion'),
+        CYC('--cyc-st-fuera'),
+        CYC('--cyc-st-interno'),
+        CYC('--cyc-st-taller')
       ];
       
       if (chartEstadoFlotaInstance) {
@@ -3141,7 +3287,7 @@
               labels: {
                 boxWidth: 12,
                 font: { size: 11 },
-                color: '#475569'
+                color: CYC('--cyc-text-2')
               }
             }
           },
@@ -3166,7 +3312,7 @@
           labels: labels,
           datasets: [{
             data: dataPoints,
-            backgroundColor: '#3b82f6',
+            backgroundColor: CYC('--cyc-brand'),
             borderRadius: 5,
             borderWidth: 0
           }]
@@ -3181,11 +3327,11 @@
           scales: {
             x: {
               beginAtZero: true,
-              ticks: { color: '#94a3b8' },
-              grid: { color: '#f1f5f9' }
+              ticks: { color: CYC('--cyc-text-3') },
+              grid: { color: REJILLA }
             },
             y: {
-              ticks: { color: '#475569', font: { size: 10 } },
+              ticks: { color: CYC('--cyc-text-2'), font: { size: 10 } },
               grid: { display: false }
             }
           }
@@ -3209,7 +3355,7 @@
           labels: labels,
           datasets: [{
             data: dataPoints,
-            backgroundColor: '#10b981',
+            backgroundColor: CYC('--cyc-brand'),
             borderRadius: 5,
             borderWidth: 0
           }]
@@ -3223,11 +3369,11 @@
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { color: '#94a3b8', stepSize: 1 },
-              grid: { color: '#f1f5f9' }
+              ticks: { color: CYC('--cyc-text-3'), stepSize: 1 },
+              grid: { color: REJILLA }
             },
             x: {
-              ticks: { color: '#475569', font: { size: 10 } },
+              ticks: { color: CYC('--cyc-text-2'), font: { size: 10 } },
               grid: { display: false }
             }
           }
@@ -3272,7 +3418,7 @@
       mecanicosUbicaciones.forEach(u => {
         tbody.insertAdjacentHTML('beforeend', `
           <tr>
-            <td style="padding:10px; font-weight:600;">📍 ${u.ubicacion}</td>
+            <td style="padding:10px; font-weight:600;">${u.ubicacion}</td>
             <td style="padding:10px; text-align:center; font-weight:700; color:#10b981;">${u.cnt} de trabajo (días)</td>
           </tr>
         `);
@@ -3314,10 +3460,10 @@
       let proximas = 0, vencidas = 0, sinDatos = 0;
 
       const badge = (alerta) => {
-        if (alerta === 'vencida') { vencidas++; return '<span style="background:#fee2e2; color:#ef4444; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">Vencida</span>'; }
-        if (alerta === 'proxima') { proximas++; return '<span style="background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">Próxima</span>'; }
-        if (alerta === 'sin_datos') { sinDatos++; return '<span style="background:#f1f5f9; color:#94a3b8; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">Sin datos</span>'; }
-        return '<span style="background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;">OK</span>';
+        if (alerta === 'vencida') { vencidas++; return '<span style="background:var(--cyc-st-fuera-bg); color:var(--cyc-st-fuera-ink); padding:4px 12px; border-radius:var(--cyc-r-pill); font-size:11px; font-weight:700;">Vencida</span>'; }
+        if (alerta === 'proxima') { proximas++; return '<span style="background:var(--cyc-st-mantencion-bg); color:var(--cyc-st-mantencion-ink); padding:4px 12px; border-radius:var(--cyc-r-pill); font-size:11px; font-weight:700;">Próxima</span>'; }
+        if (alerta === 'sin_datos') { sinDatos++; return '<span style="background:var(--cyc-surface-3); color:var(--cyc-text-3); padding:4px 10px; border-radius:var(--cyc-r-pill); font-size:11px; font-weight:700;">Sin datos</span>'; }
+        return '<span style="background:var(--cyc-st-arrendado-bg); color:var(--cyc-st-arrendado-ink); padding:4px 12px; border-radius:var(--cyc-r-pill); font-size:11px; font-weight:700;">OK</span>';
       };
 
       if (!resumen.length) {
@@ -3345,8 +3491,8 @@
             <td style="padding:10px;">${proximaMant}</td>
             <td style="padding:10px; text-align:center;">${badge(r.alerta)}</td>
             <td style="padding:10px; text-align:center; white-space:nowrap;">
-              ${r.mantencion_id ? `<button class="btn btn-sm" onclick="window.open('/api/mantenciones/${r.mantencion_id}/pdf','_blank')" title="Exportar PDF">📄</button>` : ''}
-              <button class="btn btn-sm" onclick="openHistoricoModal('${escapeHtmlMant(r.equipo_id)}')" title="Ver histórico">📋</button>
+              ${r.mantencion_id ? `<button class="btn btn-sm" onclick="window.open('/api/mantenciones/${r.mantencion_id}/pdf','_blank')" title="Exportar PDF"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></button>` : ''}
+              <button class="btn btn-sm" onclick="openHistoricoModal('${escapeHtmlMant(r.equipo_id)}')" title="Ver histórico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></button>
             </td>
           </tr>
         `);

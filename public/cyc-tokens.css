@@ -1,0 +1,138 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Sistema de diseño CyC — Dirección «Señalética»
+   Archivo canónico. Se copia idéntico a cyc-hub, cyc-ops, cyc-tasks y
+   cyc-inspecciones. Si hay que cambiar un color, se cambia acá y se copia.
+
+   Regla de oro del naranjo:
+     --cyc-brand      → rellenos, logo, estado activo. NUNCA texto bajo 18px.
+     --cyc-brand-ink  → texto, enlaces, bordes de botón. Cumple AA (5.61:1).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Escala de marca (tono 22° medido del logo) ─────────────────────────
+     El 500 es el naranjo exacto del PNG original: #EF7834.
+     Contraste sobre blanco anotado al costado.                            */
+  --cyc-brand-50:  #FEF2EB;   /*  1.10:1 */
+  --cyc-brand-100: #FDE3D3;   /*  1.23:1 */
+  --cyc-brand-200: #F9C6A9;   /*  1.54:1 */
+  --cyc-brand-300: #F5A77A;   /*  1.96:1 */
+  --cyc-brand-400: #F28E54;   /*  2.39:1 */
+  --cyc-brand-500: #EF7834;   /*  2.84:1  ← logo */
+  --cyc-brand-600: #D55F1A;   /*  3.83:1 */
+  --cyc-brand-700: #AC4A11;   /*  5.61:1  ← mínimo para texto */
+  --cyc-brand-800: #883D11;   /*  7.71:1 */
+  --cyc-brand-900: #683212;   /* 10.23:1 */
+
+  --cyc-brand:        var(--cyc-brand-500);
+  --cyc-brand-ink:    var(--cyc-brand-700);
+  --cyc-brand-hover:  var(--cyc-brand-600);
+  --cyc-brand-soft:   var(--cyc-brand-50);
+  --cyc-brand-line:   var(--cyc-brand-200);
+  --cyc-brand-glow:   rgba(239, 120, 52, 0.20);
+
+  /* ── Neutros ────────────────────────────────────────────────────────────
+     Gris con una leve inclinación fría, elegido para convivir con el
+     naranjo sin ensuciarlo.                                                */
+  --cyc-bg:            #F5F6F8;
+  --cyc-surface:       #FFFFFF;
+  --cyc-surface-2:     #FAFBFC;
+  --cyc-surface-3:     #F1F3F5;
+  --cyc-border:        #E4E8EC;
+  --cyc-border-strong: #C6CDD4;
+
+  --cyc-text:   #1A1D23;   /* 15.3:1 */
+  --cyc-text-2: #4A535F;   /*  7.9:1 */
+  --cyc-text-3: #64748B;   /*  4.8:1 — el gris más claro permitido en texto */
+
+  /* ── Estados de flota ───────────────────────────────────────────────────
+     Cada estado tiene tres piezas: punto (100 %), fondo (12 %) y texto
+     (versión oscura, cumple AA). Nunca usar el punto como color de texto.  */
+  --cyc-st-arrendado:      #16A34A;
+  --cyc-st-arrendado-bg:   rgba(22, 163, 74, 0.12);
+  --cyc-st-arrendado-ink:  #15803D;
+
+  --cyc-st-fuera:          #DC2626;
+  --cyc-st-fuera-bg:       rgba(220, 38, 38, 0.12);
+  --cyc-st-fuera-ink:      #B91C1C;
+
+  --cyc-st-mantencion:     #D97706;
+  --cyc-st-mantencion-bg:  rgba(217, 119, 6, 0.13);
+  --cyc-st-mantencion-ink: #92400E;
+
+  --cyc-st-disponible:     #64748B;
+  --cyc-st-disponible-bg:  rgba(100, 116, 139, 0.10);
+  --cyc-st-disponible-ink: #475569;
+
+  --cyc-st-interno:        #EF7834;
+  --cyc-st-interno-bg:     rgba(239, 120, 52, 0.13);
+  --cyc-st-interno-ink:    #AC4A11;
+
+  --cyc-st-taller:         #9333EA;
+  --cyc-st-taller-bg:      rgba(147, 51, 234, 0.12);
+  --cyc-st-taller-ink:     #7E22CE;
+
+  /* ── Estados de mecánicos ───────────────────────────────────────────── */
+  --cyc-mec-trabajado:     #059669;
+  --cyc-mec-trabajado-bg:  rgba(5, 150, 105, 0.12);
+  --cyc-mec-extra:         #2563EB;
+  --cyc-mec-extra-bg:      rgba(37, 99, 235, 0.12);
+  --cyc-mec-subida:        #F59E0B;
+  --cyc-mec-subida-bg:     rgba(245, 158, 11, 0.14);
+  --cyc-mec-bajada:        #D97706;
+  --cyc-mec-bajada-bg:     rgba(217, 119, 6, 0.13);
+  --cyc-mec-descanso:      #64748B;
+  --cyc-mec-descanso-bg:   rgba(100, 116, 139, 0.10);
+  --cyc-mec-licencia:      #DB2777;
+  --cyc-mec-licencia-bg:   rgba(219, 39, 119, 0.12);
+  --cyc-mec-vacaciones:    #0891B2;
+  --cyc-mec-vacaciones-bg: rgba(8, 145, 178, 0.12);
+
+  --cyc-comentario:        #F59E0B;
+
+  /* ── «Hoy» ──────────────────────────────────────────────────────────────
+     Deliberadamente neutro: dentro de una grilla el naranjo ya significa
+     «uso interno», y un color no puede querer decir dos cosas.             */
+  --cyc-hoy-line: #1A1D23;
+  --cyc-hoy-bg:   rgba(26, 29, 35, 0.045);
+
+  /* ── Geometría ──────────────────────────────────────────────────────────
+     Cuatro niveles derivados de la cápsula del logo.                       */
+  --cyc-r-pill:  999px;   /* botones, chips, etiquetas de estado */
+  --cyc-r-card:  14px;    /* tarjetas, modales, paneles */
+  --cyc-r-field: 8px;     /* selects, inputs, textareas */
+  --cyc-r-cell:  4px;     /* celdas de calendario */
+
+  /* ── Tipografía ─────────────────────────────────────────────────────── */
+  --cyc-font:      'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --cyc-font-cond: 'Barlow Condensed', 'Barlow', -apple-system, sans-serif;
+
+  --cyc-t-label:  11px;   /* mayúsculas, +.12em de tracking, 600 */
+  --cyc-t-sm:     13px;
+  --cyc-t-base:   15px;
+  --cyc-t-card:   20px;
+  --cyc-t-page:   28px;
+  --cyc-t-kpi:    40px;
+
+  /* ── Sombras y movimiento ───────────────────────────────────────────── */
+  --cyc-shadow-sm: 0 1px 2px rgba(26, 29, 35, 0.05);
+  --cyc-shadow:    0 1px 2px rgba(26, 29, 35, 0.04), 0 8px 24px -12px rgba(26, 29, 35, 0.16);
+  --cyc-shadow-lg: 0 4px 8px rgba(26, 29, 35, 0.06), 0 24px 48px -20px rgba(26, 29, 35, 0.24);
+
+  --cyc-ease: 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  --cyc-ease-slow: 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Foco visible y consistente en toda la suite */
+:where(a, button, select, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--cyc-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
