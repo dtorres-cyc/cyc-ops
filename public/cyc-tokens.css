@@ -44,6 +44,23 @@
   --cyc-text-2: #4A535F;   /*  7.9:1 */
   --cyc-text-3: #64748B;   /*  4.8:1 — el gris más claro permitido en texto */
 
+  /* ── Estados ────────────────────────────────────────────────────────────
+     REGLA: nada de rosados, morados ni tonos fuertes. Los colores de estado
+     son apagados y se eligen para distinguirse entre sí, no para llamar la
+     atención. Lo que debe destacar es el dato, no la etiqueta.
+
+     Y las etapas de un proceso (pipeline, EDP) no son categorías: van con una
+     rampa neutra que se oscurece al avanzar, y solo los desenlaces reales
+     —ganado, perdido, facturado— llevan color.                              */
+
+  /* ── Rampa de etapas ─────────────────────────────────────────────────── */
+  --cyc-etapa-1: #94A3B8;
+  --cyc-etapa-2: #64748B;
+  --cyc-etapa-3: #475569;
+  --cyc-etapa-4: #334155;
+  --cyc-etapa-ok:   #15803D;
+  --cyc-etapa-bad:  #B91C1C;
+
   /* ── Estados de flota ───────────────────────────────────────────────────
      Cada estado tiene tres piezas: punto (100 %), fondo (12 %) y texto
      (versión oscura, cumple AA). Nunca usar el punto como color de texto.  */
@@ -67,9 +84,9 @@
   --cyc-st-interno-bg:     rgba(239, 120, 52, 0.13);
   --cyc-st-interno-ink:    #AC4A11;
 
-  --cyc-st-taller:         #9333EA;
-  --cyc-st-taller-bg:      rgba(147, 51, 234, 0.12);
-  --cyc-st-taller-ink:     #7E22CE;
+  --cyc-st-taller:         #0F766E;
+  --cyc-st-taller-bg:      rgba(15, 118, 110, 0.12);
+  --cyc-st-taller-ink:     #115E59;
 
   /* ── Estados de mecánicos ───────────────────────────────────────────── */
   --cyc-mec-trabajado:     #059669;
@@ -82,8 +99,8 @@
   --cyc-mec-bajada-bg:     rgba(217, 119, 6, 0.13);
   --cyc-mec-descanso:      #64748B;
   --cyc-mec-descanso-bg:   rgba(100, 116, 139, 0.10);
-  --cyc-mec-licencia:      #DB2777;
-  --cyc-mec-licencia-bg:   rgba(219, 39, 119, 0.12);
+  --cyc-mec-licencia:      #7A5C44;
+  --cyc-mec-licencia-bg:   rgba(122, 92, 68, 0.13);
   --cyc-mec-vacaciones:    #0891B2;
   --cyc-mec-vacaciones-bg: rgba(8, 145, 178, 0.12);
 
