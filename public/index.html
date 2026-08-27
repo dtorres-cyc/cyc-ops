@@ -401,6 +401,96 @@
       box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
+    /* ─── Filtro multiselección (mecánicos) ───────────────────────── */
+    .ms-wrap { position: relative; }
+
+    .ms-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 185px;
+      text-align: left;
+      line-height: 1.4;
+    }
+
+    .ms-toggle .ms-caret { flex-shrink: 0; opacity: 0.5; transition: var(--transition); }
+    .ms-wrap.open .ms-toggle .ms-caret { transform: rotate(180deg); }
+    .ms-wrap.open .ms-toggle { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+    .ms-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 60;
+      min-width: 300px;
+      max-height: 320px;
+      overflow-y: auto;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      padding: 6px;
+    }
+
+    .ms-actions {
+      display: flex;
+      gap: 6px;
+      padding: 2px 4px 8px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ms-actions button {
+      flex: 1;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .ms-actions button:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .ms-option {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .ms-option:hover { background: var(--bg-card-hover); }
+    .ms-option input { accent-color: var(--accent); cursor: pointer; margin: 0; }
+    .ms-option > span:first-of-type { flex: 1; }
+    .ms-option .ms-option-rol {
+      flex: 0 0 auto;
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .ms-empty {
+      padding: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
     /* ─── Legend ──────────────────────────────────────────────────── */
     .legend {
       display: flex;
@@ -1281,9 +1371,23 @@
             <button class="btn btn-sm" onclick="goTodayMec()">Hoy</button>
           </div>
           <div class="controls-right">
-            <select class="filter-select" id="filterMecanicoMec" onchange="renderCalendarMec()">
-              <option value="">Todos los mecánicos</option>
-            </select>
+            <div class="ms-wrap" id="msMecanicoWrap">
+              <button type="button" class="filter-select ms-toggle" id="msMecanicoToggle"
+                      aria-haspopup="true" aria-expanded="false" onclick="toggleMsMecanico(event)">
+                <span id="msMecanicoLabel">Todos los mecánicos</span>
+                <svg class="ms-caret" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+              <div class="ms-panel" id="msMecanicoPanel" style="display:none;">
+                <div class="ms-actions">
+                  <button type="button" onclick="setAllMecanicosFiltro(true)">Todos</button>
+                  <button type="button" onclick="setAllMecanicosFiltro(false)">Limpiar</button>
+                </div>
+                <div id="msMecanicoOptions"></div>
+              </div>
+            </div>
             <select class="filter-select" id="filterRolMec" onchange="renderCalendarMec()">
               <option value="">Todos los roles</option>
             </select>
@@ -1308,9 +1412,9 @@
         <!-- Calendar Container -->
         <div class="calendar-container" id="calendarContainerMec">
           <div class="empty-state" id="emptyStateMec">
-            <div class="empty-icon">🔧</div>
-            <h3>Sin mecánicos registrados</h3>
-            <p>Registra mecánicos en la pestaña de Gestión de Recursos.</p>
+            <div class="empty-icon" id="emptyIconMec">🔧</div>
+            <h3 id="emptyTitleMec">Sin mecánicos registrados</h3>
+            <p id="emptyTextMec">Registra mecánicos en la pestaña de Gestión de Recursos.</p>
           </div>
         </div>
 
@@ -2371,16 +2475,86 @@
       }
     }
 
+    // ─── Filtro multiselección de mecánicos ─────────────────────
+    // Set vacío = sin filtro (se muestran todos).
+    let filtroMecanicos = new Set();
+
+    function renderMsMecanicoOptions() {
+      const box = document.getElementById('msMecanicoOptions');
+      if (!mecanicos.length) {
+        box.innerHTML = '<div class="ms-empty">No hay mecánicos registrados</div>';
+        return;
+      }
+      box.innerHTML = mecanicos.map(m => `
+        <label class="ms-option">
+          <input type="checkbox" value="${m.id}" ${filtroMecanicos.has(String(m.id)) ? 'checked' : ''}
+                 onchange="onToggleMecanicoFiltro(this)">
+          <span>${m.nombre}</span>
+          ${m.rol ? `<span class="ms-option-rol">${m.rol}</span>` : ''}
+        </label>`).join('');
+    }
+
+    function updateMsMecanicoLabel() {
+      const label = document.getElementById('msMecanicoLabel');
+      const n = filtroMecanicos.size;
+      if (n === 0 || n === mecanicos.length) {
+        label.textContent = 'Todos los mecánicos';
+      } else if (n === 1) {
+        const id = [...filtroMecanicos][0];
+        const m = mecanicos.find(x => String(x.id) === id);
+        label.textContent = m ? m.nombre : '1 mecánico';
+      } else {
+        label.textContent = `${n} mecánicos`;
+      }
+    }
+
+    function onToggleMecanicoFiltro(input) {
+      if (input.checked) filtroMecanicos.add(input.value);
+      else filtroMecanicos.delete(input.value);
+      updateMsMecanicoLabel();
+      renderCalendarMec();
+    }
+
+    function setAllMecanicosFiltro(seleccionarTodos) {
+      filtroMecanicos = seleccionarTodos ? new Set(mecanicos.map(m => String(m.id))) : new Set();
+      renderMsMecanicoOptions();
+      updateMsMecanicoLabel();
+      renderCalendarMec();
+    }
+
+    function toggleMsMecanico(e) {
+      e.stopPropagation();
+      const wrap = document.getElementById('msMecanicoWrap');
+      const panel = document.getElementById('msMecanicoPanel');
+      const abrir = panel.style.display === 'none';
+      panel.style.display = abrir ? 'block' : 'none';
+      wrap.classList.toggle('open', abrir);
+      document.getElementById('msMecanicoToggle').setAttribute('aria-expanded', String(abrir));
+    }
+
+    function closeMsMecanico() {
+      const panel = document.getElementById('msMecanicoPanel');
+      if (!panel || panel.style.display === 'none') return;
+      panel.style.display = 'none';
+      document.getElementById('msMecanicoWrap').classList.remove('open');
+      document.getElementById('msMecanicoToggle').setAttribute('aria-expanded', 'false');
+    }
+
+    // Cerrar al hacer clic fuera o con Escape
+    document.addEventListener('click', e => {
+      const wrap = document.getElementById('msMecanicoWrap');
+      if (wrap && !wrap.contains(e.target)) closeMsMecanico();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeMsMecanico();
+    });
+
     function populateFiltersMec() {
-      const filterMec = document.getElementById('filterMecanicoMec');
-      const savedMec = filterMec.value;
-      filterMec.innerHTML = '<option value="">Todos los mecánicos</option>';
-      mecanicos.forEach(m => {
-        filterMec.insertAdjacentHTML('beforeend', `<option value="${m.id}">${m.nombre}</option>`);
-      });
-      // Si el mecánico seleccionado ya no existe, volvemos a "todos"
-      filterMec.value = savedMec;
-      if (filterMec.selectedIndex === -1) filterMec.value = '';
+      // Descartar mecánicos que ya no existen (dados de baja desde Recursos)
+      const idsVigentes = new Set(mecanicos.map(m => String(m.id)));
+      filtroMecanicos = new Set([...filtroMecanicos].filter(id => idsVigentes.has(id)));
+      renderMsMecanicoOptions();
+      updateMsMecanicoLabel();
 
       const filterRol = document.getElementById('filterRolMec');
       const savedVal = filterRol.value;
@@ -2413,13 +2587,12 @@
     function renderCalendarMec() {
       const container = document.getElementById('calendarContainerMec');
       const empty = document.getElementById('emptyStateMec');
-      const filterMec = document.getElementById('filterMecanicoMec').value;
       const filterRol = document.getElementById('filterRolMec').value;
       const filterUbi = document.getElementById('filterUbicacionMec').value;
 
       let filtered = mecanicos;
-      if (filterMec) {
-        filtered = filtered.filter(m => String(m.id) === String(filterMec));
+      if (filtroMecanicos.size) {
+        filtered = filtered.filter(m => filtroMecanicos.has(String(m.id)));
       }
       if (filterRol) {
         filtered = filtered.filter(m => m.rol === filterRol);
@@ -2439,7 +2612,15 @@
 
       document.getElementById('monthLabelMec').textContent = `${MESES[currentMonthMec - 1]} ${currentYearMec}`;
 
-      if (filtered.length === 0 && mecanicos.length === 0) {
+      if (filtered.length === 0) {
+        const sinRegistrar = mecanicos.length === 0;
+        document.getElementById('emptyIconMec').textContent = sinRegistrar ? '🔧' : '🔍';
+        document.getElementById('emptyTitleMec').textContent = sinRegistrar
+          ? 'Sin mecánicos registrados'
+          : 'Ningún mecánico coincide con los filtros';
+        document.getElementById('emptyTextMec').textContent = sinRegistrar
+          ? 'Registra mecánicos en la pestaña de Gestión de Recursos.'
+          : 'Ajusta la selección de mecánicos, el rol o la ubicación.';
         empty.style.display = 'block';
         const table = container.querySelector('.calendar-table');
         if (table) table.remove();
