@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/cyc-tokens.css">
+  <script src="/cyc-nav.js" data-app="ops"></script>
   <link rel="icon" href="/isotipo-cyc-simple.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -1109,6 +1110,10 @@
       .calendar-container { padding: 0 16px 16px; }
     }
 
+    /* Con el menú común de la suite (cyc-nav.js), que ya trae estas mismas
+       secciones, el menú propio de Ops sobra. */
+    html.cyc-nav-on .sidebar { display: none; }
+
     /* Estandarización botón volver al hub */
     .btn-volver-hub {
       display: inline-flex;
@@ -1955,9 +1960,20 @@
       currentMonthDashboard = now.getMonth() + 1;
       
       loadConfig().then(() => {
-        switchTab('calendario');
+        switchTab(tabDelHash() || 'calendario');
         fetchContratosHub();
       });
+    });
+
+    // Cada pestaña se abre por su hash (#calendario, #dashboard, #mecanicos…),
+    // que es como enlaza el menú común de la suite.
+    function tabDelHash() {
+      const tab = location.hash.slice(1);
+      return tab && document.getElementById('panel-' + tab) ? tab : null;
+    }
+    window.addEventListener('hashchange', () => {
+      const tab = tabDelHash();
+      if (tab && tab !== activeTab) switchTab(tab);
     });
 
     async function loadConfig() {
@@ -1976,6 +1992,7 @@
 
     function switchTab(tabId) {
       activeTab = tabId;
+      if (location.hash !== '#' + tabId) history.replaceState(null, '', '#' + tabId);
       
       // Hide all panels and show selected
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
