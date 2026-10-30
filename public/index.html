@@ -45,6 +45,15 @@
       --st-uso-interno-bg:   var(--cyc-st-interno-bg);
       --st-en-taller:        var(--cyc-st-taller);
       --st-en-taller-bg:     var(--cyc-st-taller-bg);
+      /* Estados propios del calendario de flota (no están en cyc-tokens.css) */
+      --st-arr-fact:         #166534;
+      --st-arr-fact-bg:      rgba(22, 101, 52, 0.38);
+      --st-arr-fs-bg:        repeating-linear-gradient(135deg, rgba(22, 163, 74, 0.30) 0 4px, rgba(220, 38, 38, 0.38) 4px 8px);
+      --st-arr-fs:           linear-gradient(135deg, var(--cyc-st-arrendado) 50%, var(--cyc-st-fuera) 50%);
+      --st-en-venta:         #2563EB;
+      --st-en-venta-bg:      rgba(37, 99, 235, 0.13);
+      --st-vendido:          #1E293B;
+      --st-vendido-bg:       rgba(30, 41, 59, 0.55);
 
       /* Estados de mecánicos */
       --st-mec-trabajado:     var(--cyc-mec-trabajado);
@@ -574,7 +583,8 @@
 
     /* ─── Calendar Grid ─────────────────────────────────────────── */
     .calendar-container {
-      padding: 0 28px 28px;
+      --cal-pad: 28px;
+      padding: 0 var(--cal-pad) var(--cal-pad);
       overflow: auto;
       max-height: 68vh;
       /* Sin esto el flex del panel comprime la grilla muy por debajo de 68vh
@@ -745,7 +755,12 @@
     .day-cell[data-estado="mantencion"]      { background: var(--st-mantencion-bg); border: 1px solid rgba(234,179,8,0.4); }
     .day-cell[data-estado="disponible"]      { background: var(--st-disponible-bg); border: 1px solid rgba(71,85,105,0.25); }
     .day-cell[data-estado="uso_interno"]     { background: var(--st-uso-interno-bg); border: 1px solid rgba(59,130,246,0.4); }
-    .day-cell[data-estado="en_taller"]       { background: var(--st-en-taller-bg); border: 1px solid rgba(168,85,247,0.4); }
+    .day-cell[data-estado="en_taller"]       { background: var(--st-en-taller-bg); border: 1px solid rgba(15,118,110,0.4); }
+    .day-cell[data-estado="arrendado_facturando"] { background: var(--st-arr-fact-bg); border: 1px solid rgba(22,101,52,0.6); color: #fff; font-size: 10px; font-weight: 700; }
+    .day-cell[data-estado="arrendado_facturando"]::before { content: '$'; }
+    .day-cell[data-estado="arrendado_fs"]    { background: var(--st-arr-fs-bg); border: 1px solid rgba(220,38,38,0.45); }
+    .day-cell[data-estado="en_venta"]        { background: var(--st-en-venta-bg); border: 1px solid rgba(37,99,235,0.4); }
+    .day-cell[data-estado="vendido"]         { background: var(--st-vendido-bg); border: 1px solid rgba(30,41,59,0.6); }
     
     /* Mechanics day-cell styles */
     .day-cell[data-estado="trabajado"]   { background: var(--st-mec-trabajado-bg); border: 1px solid rgba(16,185,129,0.4); color: #10b981; font-weight: bold; font-size: 9px; }
@@ -878,6 +893,45 @@
     .status-btn[data-status="disponible"].active      { background: var(--st-disponible); border-color: var(--st-disponible); }
     .status-btn[data-status="uso_interno"].active     { background: var(--st-uso-interno); border-color: var(--st-uso-interno); }
     .status-btn[data-status="en_taller"].active       { background: var(--st-en-taller); border-color: var(--st-en-taller); }
+    .status-btn[data-status="arrendado_facturando"].active { background: var(--st-arr-fact); border-color: var(--st-arr-fact); }
+    .status-btn[data-status="arrendado_fs"].active    { background: var(--st-arr-fs); border-color: var(--st-fuera-servicio); }
+    .status-btn[data-status="en_venta"].active        { background: var(--st-en-venta); border-color: var(--st-en-venta); }
+    .status-btn[data-status="vendido"].active         { background: var(--st-vendido); border-color: var(--st-vendido); }
+    .status-btn[data-status="disponible"] .sdot       { border: 1px solid var(--border-hover); }
+
+    /* Columnas fijas de situación (cliente / ubicación) junto al nombre del equipo */
+    .calendar-flota { --w-equipo: 100px; --w-tipo: 120px; --w-patente: 90px; --w-cliente: 150px; --w-ubicacion: 115px; }
+    .calendar-flota thead th.th-equipo,
+    .calendar-flota .td-equipo { width: var(--w-equipo); min-width: var(--w-equipo); max-width: var(--w-equipo); box-shadow: none; }
+    .calendar-table thead th.th-info,
+    .calendar-table .td-info {
+      position: sticky;
+      text-align: left;
+      padding: 6px 10px !important;
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .calendar-table thead th.th-info { z-index: 30; background: var(--bg-secondary); }
+    .calendar-table .td-info { z-index: 12; background: var(--bg-card); font-size: 12px; color: var(--text-primary); }
+    .calendar-table tbody tr:hover .td-info { background: var(--bg-card-hover); }
+    /* Las columnas fijas se pegan al borde del contenedor, no a su relleno:
+       si no, los días asoman por los 28px de la izquierda al desplazar. */
+    .calendar-container .calendar-table thead th.th-equipo,
+    .calendar-container .calendar-table .td-equipo { left: calc(-1 * var(--cal-pad)); }
+    .calendar-table .col-tipo      { left: calc(var(--w-equipo) - var(--cal-pad, 0px)); width: var(--w-tipo); min-width: var(--w-tipo); max-width: var(--w-tipo); }
+    .calendar-table .col-patente   { left: calc(var(--w-equipo) + var(--w-tipo) - var(--cal-pad, 0px)); width: var(--w-patente); min-width: var(--w-patente); max-width: var(--w-patente); }
+    .calendar-table .col-cliente   { left: calc(var(--w-equipo) + var(--w-tipo) + var(--w-patente) - var(--cal-pad, 0px)); width: var(--w-cliente); min-width: var(--w-cliente); max-width: var(--w-cliente); }
+    .calendar-table .col-ubicacion { left: calc(var(--w-equipo) + var(--w-tipo) + var(--w-patente) + var(--w-cliente) - var(--cal-pad, 0px)); width: var(--w-ubicacion); min-width: var(--w-ubicacion); max-width: var(--w-ubicacion); box-shadow: 4px 0 8px -4px rgba(0,0,0,0.35); }
+    .info-estado { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+    .info-estado .sdot { width: 7px; height: 7px; margin: 0; }
+    .info-vacio { color: var(--text-muted); }
+    .calendar-table .td-info.col-patente { font-variant-numeric: tabular-nums; letter-spacing: 0.3px; }
+    /* En pantallas angostas las cinco columnas fijas taparían los días: solo Equipo queda fija */
+    @media (max-width: 900px) {
+      .calendar-table .th-info, .calendar-table .td-info { position: static; box-shadow: none; }
+    }
 
     /* Mechanics status-btn active styles */
     .status-btn[data-status="trabajado"].active   { background: #10b981; border-color: #10b981; }
@@ -1107,7 +1161,7 @@
       .kpi-bar { padding: 12px 16px; grid-template-columns: repeat(2, 1fr); }
       .controls { padding: 12px 16px; }
       .legend { padding: 0 16px 10px; }
-      .calendar-container { padding: 0 16px 16px; }
+      .calendar-container { --cal-pad: 16px; }
     }
 
     /* Con el menú común de la suite (cyc-nav.js), que ya trae estas mismas
@@ -1318,24 +1372,18 @@
             </select>
             <select class="filter-select" id="filterEstado" onchange="renderCalendar()">
               <option value="">Todos los estados</option>
-              <option value="arrendado">🟢 Arrendado</option>
-              <option value="fuera_servicio">🔴 Fuera de Servicio</option>
-              <option value="mantencion">🟡 Mantención</option>
-              <option value="disponible">⚪ Disponible</option>
-              <option value="uso_interno">🔵 Uso Interno</option>
-              <option value="en_taller">🟣 En Taller</option>
+            </select>
+            <select class="filter-select" id="filterCliente" onchange="renderCalendar()">
+              <option value="">Todos los clientes</option>
+            </select>
+            <select class="filter-select" id="filterUbicacion" onchange="renderCalendar()">
+              <option value="">Todas las ubicaciones</option>
             </select>
           </div>
         </div>
 
         <!-- Legend -->
-        <div class="legend">
-          <div class="legend-item"><div class="legend-dot" style="background:var(--st-arrendado)"></div>Arrendado</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--st-fuera-servicio)"></div>Fuera de Servicio</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--st-mantencion)"></div>Mantención</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--st-disponible)"></div>Disponible</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--st-uso-interno)"></div>Uso Interno</div>
-          <div class="legend-item"><div class="legend-dot" style="background:var(--st-en-taller)"></div>En Taller</div>
+        <div class="legend" id="legendFlota">
           <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; width:8px; height:8px; border-radius:50%;"></div>Con comentario</div>
         </div>
 
@@ -1819,14 +1867,12 @@
       </div>
       <div class="modal-body">
         <label>Estado</label>
-        <div class="status-grid" id="statusGrid">
-          <button class="status-btn" data-status="arrendado" onclick="selectStatus('arrendado')"><span class="sdot" style="background:var(--cyc-st-arrendado)"></span>Arrendado</button>
-          <button class="status-btn" data-status="fuera_servicio" onclick="selectStatus('fuera_servicio')"><span class="sdot" style="background:var(--cyc-st-fuera)"></span>Fuera Serv.</button>
-          <button class="status-btn" data-status="mantencion" onclick="selectStatus('mantencion')"><span class="sdot" style="background:var(--cyc-st-mantencion)"></span>Mantención</button>
-          <button class="status-btn" data-status="disponible" onclick="selectStatus('disponible')">⚪ Disponible</button>
-          <button class="status-btn" data-status="uso_interno" onclick="selectStatus('uso_interno')"><span class="sdot" style="background:var(--cyc-st-interno)"></span>Uso Interno</button>
-          <button class="status-btn" data-status="en_taller" onclick="selectStatus('en_taller')"><span class="sdot" style="background:var(--cyc-st-taller)"></span>En Taller</button>
-        </div>
+        <div class="status-grid" id="statusGrid"></div>
+
+        <label>Ubicación</label>
+        <select class="modal-input" id="modalUbicacion">
+          <option value="">-- Sin ubicación --</option>
+        </select>
 
         <label>Cliente</label>
         <input class="modal-input" id="modalCliente" placeholder="Nombre del cliente" list="clientesList" oninput="onClienteChange()">
@@ -1908,7 +1954,8 @@
     // ─── State ──────────────────────────────────────────────────
     let currentYear, currentMonth;
     let equipos = [];
-    let registros = {};   // { "RSCS-01|2026-06-05": { estado, cliente, contrato, comentario } }
+    let registros = {};   // { "RSCS-01|2026-06-05": { estado, cliente, contrato, comentario, ubicacion } }
+    let resumenEquipos = {}; // { "RSCS-01": { estado, cliente, ubicacion } } — situación a la fecha de referencia
     let editingCell = null; // { equipo_id, fecha }
     let selectedStatus = 'disponible';
     let activeTab = 'calendario';
@@ -1947,6 +1994,40 @@
     const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
+    // Estados de un equipo en el calendario de flota. De acá salen los botones del
+    // modal, la leyenda y el filtro; el servidor tiene la misma lista en server.js.
+    // «uso_interno» queda al final solo para mostrar y editar registros antiguos.
+    const ESTADOS_FLOTA = [
+      { key: 'arrendado',            label: 'Arrendado',                 corto: 'Arrendado',      color: 'var(--st-arrendado)' },
+      { key: 'arrendado_facturando', label: 'Arrendado facturando',      corto: 'Arr. facturando', color: 'var(--st-arr-fact)' },
+      { key: 'arrendado_fs',         label: 'Arrendado fuera de servicio', corto: 'Arr. fuera serv.', color: 'var(--st-arr-fs)' },
+      { key: 'disponible',           label: 'Disponible (Operativo)',    corto: 'Disponible',     color: 'var(--st-disponible)' },
+      { key: 'mantencion',           label: 'Mantención',                corto: 'Mantención',     color: 'var(--st-mantencion)' },
+      { key: 'fuera_servicio',       label: 'Fuera de servicio (Panne)', corto: 'Panne',          color: 'var(--st-fuera-servicio)' },
+      { key: 'en_taller',            label: 'Taller',                    corto: 'Taller',         color: 'var(--st-en-taller)' },
+      { key: 'en_venta',             label: 'En venta',                  corto: 'En venta',       color: 'var(--st-en-venta)' },
+      { key: 'vendido',              label: 'Vendido',                   corto: 'Vendido',        color: 'var(--st-vendido)' },
+      { key: 'uso_interno',          label: 'Uso interno (antiguo)',     corto: 'Uso interno',    color: 'var(--st-uso-interno)' },
+    ];
+    const ESTADO_POR_KEY = Object.fromEntries(ESTADOS_FLOTA.map(e => [e.key, e]));
+    const ESTADOS_ARRENDADO = ['arrendado', 'arrendado_facturando', 'arrendado_fs'];
+
+    function escHtml(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function renderEstadosFlotaUI() {
+      document.getElementById('statusGrid').innerHTML = ESTADOS_FLOTA.map(e =>
+        `<button class="status-btn" data-status="${e.key}" onclick="selectStatus('${e.key}')"><span class="sdot" style="background:${e.color}"></span>${e.corto}</button>`
+      ).join('');
+      document.getElementById('legendFlota').insertAdjacentHTML('afterbegin', ESTADOS_FLOTA.map(e =>
+        `<div class="legend-item"><div class="legend-dot" style="background:${e.color}"></div>${e.label}</div>`
+      ).join(''));
+      document.getElementById('filterEstado').insertAdjacentHTML('beforeend', ESTADOS_FLOTA.map(e =>
+        `<option value="${e.key}">${e.label}</option>`
+      ).join(''));
+    }
+
     // ─── Init ───────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       const now = new Date();
@@ -1958,6 +2039,8 @@
 
       currentYearDashboard = now.getFullYear();
       currentMonthDashboard = now.getMonth() + 1;
+
+      renderEstadosFlotaUI();
       
       loadConfig().then(() => {
         switchTab(tabDelHash() || 'calendario');
@@ -2027,8 +2110,9 @@
 
     async function loadAll() {
       await loadEquipos();
-      await loadRegistros();
+      await Promise.all([loadRegistros(), loadResumen(), loadUbicaciones()]);
       await loadStats();
+      populateFiltrosFlota();
       renderCalendar();
     }
 
@@ -2058,6 +2142,47 @@
       }
     }
 
+    // Fecha a la que se muestra la situación de cada equipo (columnas Cliente / Ubicación):
+    // hoy si el mes mostrado es el actual o uno futuro; el último día del mes si es pasado.
+    function fechaReferencia() {
+      const hoy = new Date();
+      const finMes = new Date(currentYear, currentMonth, 0);
+      const ref = finMes < hoy ? finMes : hoy;
+      return `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}-${String(ref.getDate()).padStart(2, '0')}`;
+    }
+
+    async function loadResumen() {
+      try {
+        const res = await fetch(`/api/calendario/resumen?fecha=${fechaReferencia()}`);
+        const data = await res.json();
+        resumenEquipos = {};
+        for (const r of data) resumenEquipos[r.equipo_id] = r;
+      } catch (e) {
+        console.error('Error loading resumen:', e);
+      }
+    }
+
+    // Clientes y ubicaciones que aparecen en el mes, más las ubicaciones configuradas
+    function populateFiltrosFlota() {
+      const regs = [...Object.values(registros), ...Object.values(resumenEquipos)];
+      const clientes = [...new Set(regs.map(r => r.cliente?.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+      const ubis = [...new Set([...ubicaciones.map(u => u.nombre), ...regs.map(r => r.ubicacion?.trim()).filter(Boolean)])].sort((a, b) => a.localeCompare(b, 'es'));
+
+      const llenar = (id, vacio, valores) => {
+        const sel = document.getElementById(id);
+        const actual = sel.value;
+        sel.innerHTML = `<option value="">${vacio}</option>` +
+          valores.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+        if (valores.includes(actual)) sel.value = actual;
+      };
+      llenar('filterCliente', 'Todos los clientes', clientes);
+      llenar('filterUbicacion', 'Todas las ubicaciones', ubis);
+
+      const selUbi = document.getElementById('modalUbicacion');
+      selUbi.innerHTML = '<option value="">-- Sin ubicación --</option>' +
+        ubis.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join('');
+    }
+
     async function loadStats() {
       try {
         const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
@@ -2065,10 +2190,10 @@
         const s = await res.json();
 
         document.getElementById('kpiUtilizacion').textContent = s.utilizacion + '%';
-        document.getElementById('kpiUtilSub').textContent = `${s.byEstado.arrendado || 0} de ${s.totalPossible} días-equipo`;
+        document.getElementById('kpiUtilSub').textContent = `${s.diasArrendados || 0} de ${s.totalUtilizable ?? s.totalPossible} días-equipo`;
         document.getElementById('kpiEquipos').textContent = s.totalEquipos;
         document.getElementById('kpiEquiposSub').textContent = `${s.daysInMonth} días en el mes`;
-        document.getElementById('kpiFS').textContent = (s.byEstado.fuera_servicio || 0) + (s.byEstado.en_taller || 0);
+        document.getElementById('kpiFS').textContent = s.diasDetenidos || 0;
         document.getElementById('kpiFSSub').textContent = `${s.topFueraServicio.length} equipos afectados`;
         document.getElementById('kpiSinArriendo').textContent = s.equiposSinArriendo;
       } catch (e) {
@@ -2083,23 +2208,28 @@
 
       const filterTipo = document.getElementById('filterTipo').value;
       const filterEstado = document.getElementById('filterEstado').value;
+      const filterCliente = document.getElementById('filterCliente').value;
+      const filterUbicacion = document.getElementById('filterUbicacion').value;
+
+      // Un equipo pasa el filtro si su situación actual coincide o si tuvo al menos un día así en el mes
+      const regsDelEquipo = id => Object.values(registros).filter(r => r.equipo_id === id);
+      const coincide = (eq, campo, valor) => {
+        if ((resumenEquipos[eq.equipo_id]?.[campo] || '').trim() === valor) return true;
+        return regsDelEquipo(eq.equipo_id).some(r => (r[campo] || '').trim() === valor);
+      };
 
       let filtered = equipos;
       if (filterTipo) {
         filtered = filtered.filter(e => e.tipo === filterTipo);
       }
       if (filterEstado) {
-        filtered = filtered.filter(e => {
-          // Show equipos that have at least 1 day with the selected estado
-          const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-          const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-          for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${mes}-${String(d).padStart(2, '0')}`;
-            const key = `${e.equipo_id}|${dateStr}`;
-            if (registros[key]?.estado === filterEstado) return true;
-          }
-          return false;
-        });
+        filtered = filtered.filter(e => regsDelEquipo(e.equipo_id).some(r => r.estado === filterEstado));
+      }
+      if (filterCliente) {
+        filtered = filtered.filter(e => coincide(e, 'cliente', filterCliente));
+      }
+      if (filterUbicacion) {
+        filtered = filtered.filter(e => coincide(e, 'ubicacion', filterUbicacion));
       }
 
       // Update month label
@@ -2120,7 +2250,9 @@
       const isCurrentMonth = today.getFullYear() === currentYear && (today.getMonth() + 1) === currentMonth;
       const todayDay = today.getDate();
 
-      let html = '<table class="calendar-table"><thead><tr><th class="th-equipo">Equipo</th>';
+      let html = '<table class="calendar-table calendar-flota"><thead><tr><th class="th-equipo">Equipo</th>' +
+        '<th class="th-info col-tipo">Tipo</th><th class="th-info col-patente">Patente</th>' +
+        '<th class="th-info col-cliente">Cliente</th><th class="th-info col-ubicacion">Ubicación</th>';
       for (let d = 1; d <= daysInMonth; d++) {
         const date = new Date(currentYear, currentMonth - 1, d);
         const dow = date.getDay();
@@ -2131,14 +2263,24 @@
       html += '</tr></thead><tbody>';
 
       for (const eq of filtered) {
-        html += `<tr><td class="td-equipo"><div class="equipo-name">${eq.equipo_id}</div><div class="equipo-type">${eq.tipo || ''}</div></td>`;
+        const sit = resumenEquipos[eq.equipo_id] || {};
+        const est = ESTADO_POR_KEY[sit.estado];
+        const arrendado = ESTADOS_ARRENDADO.includes(sit.estado);
+        const clienteTxt = arrendado && sit.cliente ? escHtml(sit.cliente) : '<span class="info-vacio">—</span>';
+        const estadoTxt = est ? `<div class="info-estado"><span class="sdot" style="background:${est.color}"></span>${est.corto}</div>` : '';
+        const vacio = '<span class="info-vacio">—</span>';
+        html += `<tr><td class="td-equipo"><div class="equipo-name">${eq.equipo_id}</div></td>`;
+        html += `<td class="td-info col-tipo" title="${escHtml(eq.tipo || '')}">${eq.tipo ? escHtml(eq.tipo) : vacio}</td>`;
+        html += `<td class="td-info col-patente">${eq.patente ? escHtml(eq.patente) : vacio}</td>`;
+        html += `<td class="td-info col-cliente" title="${escHtml(sit.cliente || '')}"><div>${clienteTxt}</div>${estadoTxt}</td>`;
+        html += `<td class="td-info col-ubicacion" title="${escHtml(sit.ubicacion || '')}">${sit.ubicacion ? escHtml(sit.ubicacion) : '<span class="info-vacio">—</span>'}</td>`;
         for (let d = 1; d <= daysInMonth; d++) {
           const dateStr = `${mes}-${String(d).padStart(2, '0')}`;
           const key = `${eq.equipo_id}|${dateStr}`;
           const reg = registros[key];
           const estado = reg?.estado || '';
           const hasComment = reg?.comentario ? ' has-comment' : '';
-          const title = reg ? `${estado}${reg.cliente ? ' — ' + reg.cliente : ''}${reg.comentario ? '\n💬 ' + reg.comentario : ''}` : 'Sin registro';
+          const title = reg ? escHtml(`${ESTADO_POR_KEY[estado]?.label || estado}${reg.cliente ? ' — ' + reg.cliente : ''}${reg.ubicacion ? ' · ' + reg.ubicacion : ''}${reg.comentario ? '\n💬 ' + reg.comentario : ''}`) : 'Sin registro';
           const isToday = isCurrentMonth && d === todayDay;
 
           html += `<td class="td-day${isToday ? ' today-col' : ''}">
@@ -2302,8 +2444,17 @@
       document.getElementById('modalContratoManual').style.display = 'none';
       
       document.getElementById('modalComentario').value = '';
+      setModalUbicacion(resumenEquipos[dragEquipo]?.ubicacion || '');
 
       document.getElementById('cellModal').classList.add('active');
+    }
+
+    function setModalUbicacion(valor) {
+      const sel = document.getElementById('modalUbicacion');
+      if (valor && !Array.from(sel.options).some(o => o.value === valor)) {
+        sel.insertAdjacentHTML('beforeend', `<option value="${escHtml(valor)}">${escHtml(valor)}</option>`);
+      }
+      sel.value = valor;
     }
 
     // ─── Cell Modal ─────────────────────────────────────────────
@@ -2349,6 +2500,8 @@
       }
 
       document.getElementById('modalComentario').value = reg?.comentario || '';
+      // Día sin ubicación propia: se propone la última conocida del equipo
+      setModalUbicacion(reg?.ubicacion || (reg ? '' : resumenEquipos[equipoId]?.ubicacion || ''));
 
       document.getElementById('cellModal').classList.add('active');
     }
@@ -2382,6 +2535,7 @@
         cliente: document.getElementById('modalCliente').value.trim() || null,
         contrato: contratoVal,
         comentario: document.getElementById('modalComentario').value.trim() || null,
+        ubicacion: document.getElementById('modalUbicacion').value || null,
       };
 
       try {
@@ -2408,8 +2562,9 @@
         }
 
         closeModal();
-        await loadRegistros();
+        await Promise.all([loadRegistros(), loadResumen()]);
         await loadStats();
+        populateFiltrosFlota();
         renderCalendar();
       } catch (e) {
         toast('Error guardando: ' + e.message, 'error');
@@ -3159,14 +3314,14 @@
         
         // 1. Update KPIs
         document.getElementById('dbKpiUtilizacion').textContent = data.utilizacion + '%';
-        document.getElementById('dbKpiUtilSub').textContent = `${data.byEstado?.arrendado || 0} de ${data.totalPossible || 0} días-equipo`;
+        document.getElementById('dbKpiUtilSub').textContent = `${data.diasArrendados || 0} de ${data.totalUtilizable ?? data.totalPossible ?? 0} días-equipo`;
         
         document.getElementById('dbKpiEquipos').textContent = data.totalEquipos;
         document.getElementById('dbKpiEquiposSub').textContent = `${data.daysInMonth} días en el mes`;
         
         document.getElementById('dbKpiDisponibles').textContent = data.byEstado?.disponible || 0;
         
-        const fsDays = (data.byEstado?.fuera_servicio || 0) + (data.byEstado?.en_taller || 0);
+        const fsDays = data.diasDetenidos || 0;
         document.getElementById('dbKpiMantenciones').textContent = fsDays;
         document.getElementById('dbKpiMantencionesSub').textContent = `${data.detenciones?.length || 0} equipos afectados`;
         
@@ -3255,24 +3410,17 @@
     function renderEstadoFlotaChart(byEstado) {
       const ctx = document.getElementById('chartEstadoFlota').getContext('2d');
       
-      const labels = ['Arrendado', 'Disponible', 'Mantención', 'Fuera Servicio', 'Uso Interno', 'En Taller'];
-      const dataPoints = [
-        byEstado.arrendado || 0,
-        byEstado.disponible || 0,
-        byEstado.mantencion || 0,
-        byEstado.fuera_servicio || 0,
-        byEstado.uso_interno || 0,
-        byEstado.en_taller || 0
-      ];
-      
-      const colors = [
-        CYC('--cyc-st-arrendado'),
-        CYC('--cyc-st-disponible'),
-        CYC('--cyc-st-mantencion'),
-        CYC('--cyc-st-fuera'),
-        CYC('--cyc-st-interno'),
-        CYC('--cyc-st-taller')
-      ];
+      // «Arrendado fuera de servicio» es un degradado en el calendario; en el gráfico va en rojo oscuro
+      const COLOR_GRAFICO = {
+        arrendado: '--cyc-st-arrendado', arrendado_facturando: '--st-arr-fact', disponible: '--cyc-st-disponible',
+        mantencion: '--cyc-st-mantencion', fuera_servicio: '--cyc-st-fuera', en_taller: '--cyc-st-taller',
+        en_venta: '--st-en-venta', vendido: '--st-vendido', uso_interno: '--cyc-st-interno',
+      };
+      // Solo los estados con días en el mes (así «uso interno» no aparece si ya no se usa)
+      const visibles = ESTADOS_FLOTA.filter(e => byEstado[e.key]);
+      const labels = visibles.map(e => e.label);
+      const dataPoints = visibles.map(e => byEstado[e.key]);
+      const colors = visibles.map(e => e.key === 'arrendado_fs' ? '#991B1B' : CYC(COLOR_GRAFICO[e.key]));
       
       if (chartEstadoFlotaInstance) {
         chartEstadoFlotaInstance.destroy();

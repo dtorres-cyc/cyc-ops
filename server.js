@@ -33,6 +33,19 @@ const equiposCols = new Set(db.prepare('PRAGMA table_info(equipos)').all().map(c
 for (const [col, type] of [['horometro_actual', 'TEXT'], ['fecha_horometro', 'TEXT'], ['contrato_estado', 'TEXT'], ['anio', 'TEXT']]) {
   if (!equiposCols.has(col)) db.exec(`ALTER TABLE equipos ADD COLUMN ${col} ${type}`);
 }
+// Ubicación del equipo por día. Solo se agrega la columna: los registros existentes quedan intactos.
+const registroCols = new Set(db.prepare('PRAGMA table_info(registro_diario)').all().map(c => c.name));
+if (!registroCols.has('ubicacion')) db.exec('ALTER TABLE registro_diario ADD COLUMN ubicacion TEXT');
+
+// Estados de flota. Los tres «arrendado*» cuentan como días arrendados para la utilización;
+// los de detención suman a los KPI de fuera de servicio. «uso_interno» se mantiene por los registros antiguos.
+const ESTADOS_FLOTA = ['arrendado', 'arrendado_facturando', 'arrendado_fs', 'disponible', 'mantencion',
+  'fuera_servicio', 'en_taller', 'en_venta', 'vendido', 'uso_interno'];
+const ESTADOS_ARRENDADO = ['arrendado', 'arrendado_facturando', 'arrendado_fs'];
+const ESTADOS_DETENIDO  = ['fuera_servicio', 'en_taller', 'arrendado_fs'];
+const sqlLista = arr => arr.map(e => `'${e}'`).join(', ');
+const SQL_ARRENDADO = sqlLista(ESTADOS_ARRENDADO);
+const SQL_DETENIDO  = sqlLista(ESTADOS_DETENIDO);
 
 const ALERTA_UMBRAL_HORAS = 150;
 
@@ -205,20 +218,45 @@ app.get('/api/calendario', (req, res) => {
 // PUT upsert a single day
 app.put('/api/calendario', (req, res) => {
   try {
-    const { equipo_id, fecha, estado, cliente, contrato, comentario } = req.body;
+    const { equipo_id, fecha, estado, cliente, contrato, comentario, ubicacion } = req.body;
     if (!equipo_id || !fecha) return res.status(400).json({ error: 'equipo_id y fecha requeridos' });
+    if (estado && !ESTADOS_FLOTA.includes(estado)) return res.status(400).json({ error: `Estado desconocido: ${estado}` });
 
     db.prepare(`
-      INSERT INTO registro_diario (equipo_id, fecha, estado, cliente, contrato, comentario, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      INSERT INTO registro_diario (equipo_id, fecha, estado, cliente, contrato, comentario, ubicacion, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(equipo_id, fecha) DO UPDATE SET
         estado     = excluded.estado,
         cliente    = excluded.cliente,
         contrato   = excluded.contrato,
         comentario = excluded.comentario,
+        ubicacion  = excluded.ubicacion,
         updated_at = datetime('now')
-    `).run(equipo_id, fecha, estado || 'disponible', cliente || null, contrato || null, comentario || null);
+    `).run(equipo_id, fecha, estado || 'disponible', cliente || null, contrato || null, comentario || null, ubicacion || null);
     res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET situación de cada equipo a una fecha: ?fecha=2026-06-15
+// Toma el último registro hasta esa fecha (aunque sea de un mes anterior) y la última ubicación informada.
+app.get('/api/calendario/resumen', (req, res) => {
+  try {
+    const fecha = req.query.fecha;
+    if (!fecha || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return res.status(400).json({ error: 'Parámetro fecha requerido (formato: YYYY-MM-DD)' });
+    }
+    const filas = db.prepare(`
+      SELECT e.equipo_id,
+        (SELECT r.estado  FROM registro_diario r WHERE r.equipo_id = e.equipo_id AND r.fecha <= @fecha ORDER BY r.fecha DESC LIMIT 1) AS estado,
+        (SELECT r.cliente FROM registro_diario r WHERE r.equipo_id = e.equipo_id AND r.fecha <= @fecha ORDER BY r.fecha DESC LIMIT 1) AS cliente,
+        (SELECT r.ubicacion FROM registro_diario r WHERE r.equipo_id = e.equipo_id AND r.fecha <= @fecha
+           AND r.ubicacion IS NOT NULL AND r.ubicacion != '' ORDER BY r.fecha DESC LIMIT 1) AS ubicacion
+      FROM equipos e
+      WHERE e.activo = 1
+    `).all({ fecha });
+    res.json(filas);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -227,25 +265,27 @@ app.put('/api/calendario', (req, res) => {
 // PUT batch update (for drag selection)
 app.put('/api/calendario/batch', (req, res) => {
   try {
-    const { equipo_id, fechas, estado, cliente, contrato, comentario } = req.body;
+    const { equipo_id, fechas, estado, cliente, contrato, comentario, ubicacion } = req.body;
     if (!equipo_id || !fechas || !Array.isArray(fechas)) {
       return res.status(400).json({ error: 'equipo_id y fechas[] requeridos' });
     }
+    if (estado && !ESTADOS_FLOTA.includes(estado)) return res.status(400).json({ error: `Estado desconocido: ${estado}` });
 
     const stmt = db.prepare(`
-      INSERT INTO registro_diario (equipo_id, fecha, estado, cliente, contrato, comentario, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      INSERT INTO registro_diario (equipo_id, fecha, estado, cliente, contrato, comentario, ubicacion, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(equipo_id, fecha) DO UPDATE SET
         estado     = excluded.estado,
         cliente    = excluded.cliente,
         contrato   = excluded.contrato,
         comentario = excluded.comentario,
+        ubicacion  = excluded.ubicacion,
         updated_at = datetime('now')
     `);
 
     const batchUpdate = db.transaction((dates) => {
       for (const f of dates) {
-        stmt.run(equipo_id, f, estado || 'disponible', cliente || null, contrato || null, comentario || null);
+        stmt.run(equipo_id, f, estado || 'disponible', cliente || null, contrato || null, comentario || null, ubicacion || null);
       }
     });
 
@@ -286,20 +326,19 @@ app.get('/api/stats', (req, res) => {
       totalRegistros += s.cnt;
     }
 
-    const arrendados = byEstado['arrendado'] || 0;
-    const fueraServicio = byEstado['fuera_servicio'] || 0;
-    const mantencion = byEstado['mantencion'] || 0;
-    const disponible = byEstado['disponible'] || 0;
-    const usoInterno = byEstado['uso_interno'] || 0;
-    const enTaller = byEstado['en_taller'] || 0;
+    const suma = lista => lista.reduce((t, e) => t + (byEstado[e] || 0), 0);
+    const diasArrendados = suma(ESTADOS_ARRENDADO);
+    const diasDetenidos  = suma(ESTADOS_DETENIDO);
+    // Un equipo vendido ya no es parte del parque: sus días no cuentan en la base de la utilización
+    const totalUtilizable = totalPossible - (byEstado['vendido'] || 0);
 
-    const utilizacion = totalPossible > 0 ? Math.round((arrendados / totalPossible) * 100) : 0;
+    const utilizacion = totalUtilizable > 0 ? Math.round((diasArrendados / totalUtilizable) * 100) : 0;
 
     // Equipment with most FS days
     const topFS = db.prepare(`
       SELECT equipo_id, COUNT(*) as dias
       FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado IN ('fuera_servicio', 'en_taller')
+      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_DETENIDO})
       GROUP BY equipo_id
       ORDER BY dias DESC
       LIMIT 5
@@ -312,7 +351,7 @@ app.get('/api/stats', (req, res) => {
       WHERE e.activo = 1
         AND e.equipo_id NOT IN (
           SELECT DISTINCT equipo_id FROM registro_diario
-          WHERE fecha LIKE ? || '%' AND estado = 'arrendado'
+          WHERE fecha LIKE ? || '%' AND estado IN (${SQL_ARRENDADO})
         )
       ORDER BY e.equipo_id
     `).all(mes);
@@ -321,16 +360,12 @@ app.get('/api/stats', (req, res) => {
       totalEquipos,
       daysInMonth,
       totalPossible,
+      totalUtilizable,
       totalRegistros,
       utilizacion,
-      byEstado: {
-        arrendado: arrendados,
-        fuera_servicio: fueraServicio,
-        mantencion,
-        disponible,
-        uso_interno: usoInterno,
-        en_taller: enTaller,
-      },
+      diasArrendados,
+      diasDetenidos,
+      byEstado: Object.fromEntries(ESTADOS_FLOTA.map(e => [e, byEstado[e] || 0])),
       topFueraServicio: topFS,
       equiposSinArriendo: equiposSinArriendo.length,
     });
@@ -376,29 +411,24 @@ app.get('/api/stats/dashboard', (req, res) => {
       GROUP BY estado
     `).all(mes);
 
-    const byEstado = {
-      arrendado: 0,
-      fuera_servicio: 0,
-      mantencion: 0,
-      disponible: 0,
-      uso_interno: 0,
-      en_taller: 0
-    };
+    const byEstado = Object.fromEntries(ESTADOS_FLOTA.map(e => [e, 0]));
     for (const s of stats) {
       if (s.estado in byEstado) {
         byEstado[s.estado] = s.cnt;
       }
     }
 
-    // 3. Overall utilization rate (%)
-    const arrendados = byEstado.arrendado || 0;
-    const utilizacion = totalPossible > 0 ? Math.round((arrendados / totalPossible) * 100) : 0;
+    // 3. Overall utilization rate (%) — vendidos fuera de la base
+    const diasArrendados = ESTADOS_ARRENDADO.reduce((t, e) => t + byEstado[e], 0);
+    const diasDetenidos  = ESTADOS_DETENIDO.reduce((t, e) => t + byEstado[e], 0);
+    const totalUtilizable = totalPossible - byEstado.vendido;
+    const utilizacion = totalUtilizable > 0 ? Math.round((diasArrendados / totalUtilizable) * 100) : 0;
 
     // 4. Clients distribution
     const clientesArriendo = db.prepare(`
       SELECT cliente, COUNT(*) as cnt
       FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado = 'arrendado' AND cliente IS NOT NULL AND cliente != ''
+      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_ARRENDADO}) AND cliente IS NOT NULL AND cliente != ''
       GROUP BY cliente
       ORDER BY cnt DESC
     `).all(mes);
@@ -407,7 +437,7 @@ app.get('/api/stats/dashboard', (req, res) => {
     const dailyRentals = db.prepare(`
       SELECT SUBSTR(fecha, 9, 2) as dia, COUNT(*) as cnt
       FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado = 'arrendado'
+      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_ARRENDADO})
       GROUP BY fecha
       ORDER BY fecha
     `).all(mes);
@@ -416,7 +446,7 @@ app.get('/api/stats/dashboard', (req, res) => {
     const detenciones = db.prepare(`
       SELECT equipo_id, COUNT(*) as dias, GROUP_CONCAT(COALESCE(comentario, 'Sin comentario'), ' | ') as comentarios
       FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado IN ('fuera_servicio', 'en_taller')
+      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_DETENIDO})
       GROUP BY equipo_id
       ORDER BY dias DESC
     `).all(mes);
@@ -437,7 +467,10 @@ app.get('/api/stats/dashboard', (req, res) => {
       totalEquipos,
       daysInMonth,
       totalPossible,
+      totalUtilizable,
       utilizacion,
+      diasArrendados,
+      diasDetenidos,
       byEstado,
       clientesArriendo,
       dailyRentals,
