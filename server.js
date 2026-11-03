@@ -48,6 +48,7 @@ const SQL_ARRENDADO = sqlLista(ESTADOS_ARRENDADO);
 const SQL_DETENIDO  = sqlLista(ESTADOS_DETENIDO);
 
 const ALERTA_UMBRAL_HORAS = 150;
+const HUB_URL = process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app';
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
@@ -58,7 +59,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 // GET config for frontend URLs
 app.get('/api/config', (req, res) => {
   res.json({
-    cycHubUrl: process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app',
+    cycHubUrl: HUB_URL,
     cycInspeccionesUrl: process.env.CYC_INSPECCIONES_URL || 'https://cyc-inspecciones-production.up.railway.app'
   });
 });
@@ -113,7 +114,6 @@ app.delete('/api/equipos/:id', (req, res) => {
 // POST sync from cyc-hub
 app.post('/api/equipos/sync', async (req, res) => {
   try {
-    const HUB_URL = process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app';
     const response = await fetch(`${HUB_URL}/informe/api/data`);
     if (!response.ok) throw new Error(`Hub responded ${response.status}`);
     const data = await response.json();
@@ -377,7 +377,6 @@ app.get('/api/stats', (req, res) => {
 // Proxy route for contracts from CyC Hub
 app.get('/api/contratos', async (req, res) => {
   try {
-    const HUB_URL = process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app';
     const response = await fetch(`${HUB_URL}/arriendo/contratos`);
     if (!response.ok) throw new Error(`Hub responded ${response.status}`);
     const data = await response.json();
@@ -388,70 +387,271 @@ app.get('/api/contratos', async (req, res) => {
   }
 });
 
-// GET operations dashboard stats for a month: ?mes=2026-06
-app.get('/api/stats/dashboard', (req, res) => {
+// ─── DASHBOARD DE OPERACIÓN ──────────────────────────────────────────────────
+//
+// Todo se calcula en días-equipo a partir del calendario. Un día sin registro hereda
+// el último estado conocido del equipo (igual que /api/calendario/resumen); los días
+// anteriores al primer registro quedan «sin registro» y no entran en ninguna base.
+//
+// Los equipos en venta no se consideran: quedan fuera los marcados «Venta» en el Hub
+// y los que terminan el período en «En venta» o «Vendido». Si un equipo pasó unos días
+// en venta y volvió al parque, solo se descuentan esos días.
+
+const ESTADOS_VENTA  = ['en_venta', 'vendido'];
+const ESTADOS_TALLER = ['en_taller', 'fuera_servicio', 'mantencion'];   // detención en CyC
+const DETENCION_PROLONGADA_DIAS = 7;
+const VENTANA_EPISODIOS_DIAS = 180;  // cuánto mirar hacia atrás para medir un ingreso a taller
+
+// Fecha de hoy en Chile (el servidor corre en UTC)
+const hoyChile = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Santiago' });
+
+function sumarDias(fecha, n) {
+  const d = new Date(fecha + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function rangoFechas(desde, hasta) {
+  const fechas = [];
+  for (let f = desde; f <= hasta; f = sumarDias(f, 1)) fechas.push(f);
+  return fechas;
+}
+
+function diasEntre(desde, hasta) {
+  return Math.round((new Date(hasta + 'T12:00:00Z') - new Date(desde + 'T12:00:00Z')) / 86400000);
+}
+
+// Período de un mes, cortado en hoy si es el mes en curso. null si el mes aún no empieza.
+function periodoMes(mes) {
+  const [y, m] = mes.split('-').map(Number);
+  const desde = `${mes}-01`;
+  const finMes = `${mes}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+  const hoy = hoyChile();
+  if (desde > hoy) return null;
+  return { mes, desde, hasta: finMes < hoy ? finMes : hoy, finMes };
+}
+
+function mesAnterior(mes, n = 1) {
+  const [y, m] = mes.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 1 - n, 1));
+  return d.toISOString().slice(0, 7);
+}
+
+// ── Datos del Hub (documentos, cliente, ubicación, marca de venta) ──
+// Se guardan 5 minutos para no consultar el Hub en cada refresco.
+let cacheHub = { en: 0, equipos: null };
+async function flotaHub() {
+  if (cacheHub.equipos && Date.now() - cacheHub.en < 5 * 60 * 1000) return cacheHub.equipos;
+  try {
+    const r = await fetch(`${HUB_URL}/informe/api/data`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`Hub respondió ${r.status}`);
+    const data = await r.json();
+    cacheHub = { en: Date.now(), equipos: data.flota?.equipos || [] };
+  } catch (e) {
+    console.error('[dashboard] No se pudo leer el Hub:', e.message);
+  }
+  return cacheHub.equipos;  // null si nunca se pudo leer
+}
+
+const minus = v => String(v ?? '').trim().toLowerCase();
+const esVentaHub = e => minus(e.cliente) === 'venta' || minus(e.arrendado) === 'venta';
+
+// Estado de cada equipo activo, día a día, entre dos fechas
+function lineaDeTiempo(desde, hasta) {
+  const fechas = rangoFechas(desde, hasta);
+  const equipos = db.prepare('SELECT equipo_id, tipo, marca, modelo FROM equipos WHERE activo = 1 ORDER BY equipo_id').all();
+  const previos = db.prepare(`
+    SELECT r.equipo_id, r.estado, r.cliente FROM registro_diario r
+    JOIN (SELECT equipo_id, MAX(fecha) AS f FROM registro_diario WHERE fecha < ? GROUP BY equipo_id) u
+      ON u.equipo_id = r.equipo_id AND u.f = r.fecha
+  `).all(desde);
+  const registros = db.prepare(`
+    SELECT equipo_id, fecha, estado, cliente, comentario FROM registro_diario
+    WHERE fecha BETWEEN ? AND ? ORDER BY fecha
+  `).all(desde, hasta);
+
+  const ultimo = new Map(previos.map(p => [p.equipo_id, p]));
+  const porEquipo = new Map();
+  for (const r of registros) {
+    if (!porEquipo.has(r.equipo_id)) porEquipo.set(r.equipo_id, new Map());
+    porEquipo.get(r.equipo_id).set(r.fecha, r);
+  }
+
+  return {
+    fechas,
+    equipos: equipos.map(e => {
+      const propios = porEquipo.get(e.equipo_id) || new Map();
+      let actual = ultimo.get(e.equipo_id) || null;
+      const dias = fechas.map(f => {
+        const r = propios.get(f);
+        if (r) { actual = r; return { estado: r.estado, cliente: r.cliente, comentario: r.comentario }; }
+        return actual ? { estado: actual.estado, cliente: actual.cliente, comentario: null } : null;
+      });
+      return { ...e, dias };
+    }),
+  };
+}
+
+// Tramos seguidos de días en taller / panne / mantención
+function episodiosTaller(dias, fechas) {
+  const episodios = [];
+  let ep = null;
+  dias.forEach((d, i) => {
+    if (d && ESTADOS_TALLER.includes(d.estado)) {
+      if (!ep) ep = { desde: fechas[i], hasta: fechas[i], dias: 0, porEstado: {}, comentarios: [] };
+      ep.hasta = fechas[i];
+      ep.dias++;
+      ep.porEstado[d.estado] = (ep.porEstado[d.estado] || 0) + 1;
+      if (d.comentario && !ep.comentarios.includes(d.comentario)) ep.comentarios.push(d.comentario);
+    } else if (ep) { episodios.push(ep); ep = null; }
+  });
+  if (ep) { ep.abierto = true; episodios.push(ep); }
+  return episodios;
+}
+
+const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : null);
+
+// KPI de un período. ventaHub: Set de equipos marcados «Venta» en el Hub.
+function metricasPeriodo(per, ventaHub) {
+  const { fechas, equipos } = lineaDeTiempo(per.desde, per.hasta);
+  const n = fechas.length;
+  const t = { base: 0, sinRegistro: 0, arrendados: 0, productivos: 0, arrFS: 0, taller: 0, panne: 0, mantencion: 0, disponible: 0, usoInterno: 0 };
+  const diario = fechas.map(f => ({ fecha: f, productivo: 0, arrFS: 0, detenido: 0, disponible: 0, usoInterno: 0 }));
+  const filas = [];
+  const excluidos = [];
+
+  for (const e of equipos) {
+    const finalEstado = e.dias[n - 1]?.estado;
+    if (ventaHub.has(e.equipo_id) || ESTADOS_VENTA.includes(finalEstado)) { excluidos.push(e.equipo_id); continue; }
+
+    const f = { equipo_id: e.equipo_id, tipo: e.tipo, base: 0, arrendados: 0, productivos: 0, arrFS: 0, taller: 0, clientes: {} };
+    e.dias.forEach((d, i) => {
+      if (!d) { t.sinRegistro++; return; }
+      if (ESTADOS_VENTA.includes(d.estado)) return;
+      t.base++; f.base++;
+      const dia = diario[i];
+      switch (d.estado) {
+        case 'arrendado': case 'arrendado_facturando':
+          t.arrendados++; t.productivos++; f.arrendados++; f.productivos++; dia.productivo++;
+          if (d.cliente) f.clientes[d.cliente] = (f.clientes[d.cliente] || 0) + 1;
+          break;
+        case 'arrendado_fs':
+          t.arrendados++; t.arrFS++; f.arrendados++; f.arrFS++; dia.arrFS++;
+          if (d.cliente) f.clientes[d.cliente] = (f.clientes[d.cliente] || 0) + 1;
+          break;
+        case 'en_taller':      t.taller++;     f.taller++; dia.detenido++; break;
+        case 'fuera_servicio': t.panne++;      f.taller++; dia.detenido++; break;
+        case 'mantencion':     t.mantencion++; f.taller++; dia.detenido++; break;
+        case 'uso_interno':    t.usoInterno++; dia.usoInterno++; break;
+        default:               t.disponible++; dia.disponible++;
+      }
+    });
+    const { clientes, ...resto } = f;
+    filas.push({ ...resto, cliente: Object.entries(clientes).sort((a, b) => b[1] - a[1])[0]?.[0] || null, dias: e.dias });
+  }
+
+  const detenidos = t.taller + t.panne + t.mantencion + t.arrFS;
+  return {
+    t, n, diario, filas, excluidos, equiposBase: filas.length, fechas,
+    disponibilidad: pct(t.base - detenidos, t.base),
+    utilizacion:    pct(t.arrendados, t.base),
+    productividad:  pct(t.productivos, t.arrendados),
+    cobertura:      pct(t.base, t.base + t.sinRegistro),
+  };
+}
+
+// Resumen liviano de un mes (para la tendencia)
+function resumenMes(mes, ventaHub) {
+  const per = periodoMes(mes);
+  if (!per) return { mes, disponibilidad: null, utilizacion: null, productividad: null };
+  const m = metricasPeriodo(per, ventaHub);
+  return { mes, disponibilidad: m.disponibilidad, utilizacion: m.utilizacion, productividad: m.productividad, diasEquipo: m.t.base };
+}
+
+async function setVentaHub() {
+  const hub = await flotaHub();
+  return { hub, ventaHub: new Set((hub || []).filter(esVentaHub).map(e => String(e.id).trim())) };
+}
+
+// GET dashboard de operación de un mes: ?mes=2026-06
+app.get('/api/stats/dashboard', async (req, res) => {
   try {
     const mes = req.query.mes;
     if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
       return res.status(400).json({ error: 'Parámetro mes requerido (formato: YYYY-MM)' });
     }
+    const per = periodoMes(mes);
+    if (!per) return res.json({ mes, futuro: true });
 
-    const [year, month] = mes.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const { hub, ventaHub } = await setVentaHub();
+    const m = metricasPeriodo(per, ventaHub);
+    const anterior = resumenMes(mesAnterior(mes), ventaHub);
+    const tendencia = [5, 4, 3, 2, 1].map(i => resumenMes(mesAnterior(mes, i), ventaHub));
+    tendencia.push({ mes, disponibilidad: m.disponibilidad, utilizacion: m.utilizacion, productividad: m.productividad, diasEquipo: m.t.base });
 
-    // 1. Total active equipment
-    const totalEquipos = db.prepare('SELECT COUNT(*) as cnt FROM equipos WHERE activo = 1').get().cnt;
-    const totalPossible = totalEquipos * daysInMonth;
-
-    // 2. States breakdown
-    const stats = db.prepare(`
-      SELECT estado, COUNT(*) as cnt
-      FROM registro_diario
-      WHERE fecha LIKE ? || '%'
-      GROUP BY estado
-    `).all(mes);
-
-    const byEstado = Object.fromEntries(ESTADOS_FLOTA.map(e => [e, 0]));
-    for (const s of stats) {
-      if (s.estado in byEstado) {
-        byEstado[s.estado] = s.cnt;
+    // Tiempos en taller: la ventana va desde antes del mes hasta hoy, para medir completo
+    // un ingreso que empezó antes o que siguió después del período
+    const ventana = lineaDeTiempo(sumarDias(per.desde, -VENTANA_EPISODIOS_DIAS), hoyChile());
+    const baseIds = new Set(m.filas.map(f => f.equipo_id));
+    const ingresos = [];
+    for (const e of ventana.equipos) {
+      if (!baseIds.has(e.equipo_id)) continue;
+      for (const ep of episodiosTaller(e.dias, ventana.fechas)) {
+        if (ep.hasta < per.desde || ep.desde > per.hasta) continue;   // no toca el período
+        ingresos.push({ equipo_id: e.equipo_id, tipo: e.tipo, ...ep, abierto: !!ep.abierto,
+          recortado: ep.desde === ventana.fechas[0] });
       }
     }
+    const cerrados = ingresos.filter(i => !i.abierto);
+    const enTallerHoy = ingresos.filter(i => i.abierto).sort((a, b) => b.dias - a.dias);
+    const taller = {
+      ingresos: ingresos.filter(i => i.desde >= per.desde).length,
+      equipos: new Set(ingresos.map(i => i.equipo_id)).size,
+      promedioDias: cerrados.length ? Math.round(cerrados.reduce((s, i) => s + i.dias, 0) / cerrados.length * 10) / 10 : null,
+      cerrados: cerrados.length,
+      diasEnPeriodo: m.t.taller + m.t.panne + m.t.mantencion,
+      porEstado: { en_taller: m.t.taller, fuera_servicio: m.t.panne, mantencion: m.t.mantencion },
+      enTallerHoy: enTallerHoy.length,
+      masAntiguo: enTallerHoy[0] ? { equipo_id: enTallerHoy[0].equipo_id, dias: enTallerHoy[0].dias } : null,
+      detalle: ingresos.sort((a, b) => (b.abierto - a.abierto) || (b.dias - a.dias)),
+    };
 
-    // 3. Overall utilization rate (%) — vendidos fuera de la base
-    const diasArrendados = ESTADOS_ARRENDADO.reduce((t, e) => t + byEstado[e], 0);
-    const diasDetenidos  = ESTADOS_DETENIDO.reduce((t, e) => t + byEstado[e], 0);
-    const totalUtilizable = totalPossible - byEstado.vendido;
-    const utilizacion = totalUtilizable > 0 ? Math.round((diasArrendados / totalUtilizable) * 100) : 0;
+    // Productividad por equipo arrendado y por cliente
+    const productividadEquipos = m.filas.filter(f => f.arrendados > 0)
+      .map(f => ({ equipo_id: f.equipo_id, tipo: f.tipo, cliente: f.cliente, arrendados: f.arrendados, productivos: f.productivos,
+        arrFS: f.arrFS, productividad: pct(f.productivos, f.arrendados) }))
+      .sort((a, b) => a.productividad - b.productividad || b.arrendados - a.arrendados);
+    const porCliente = {};
+    for (const f of m.filas) {
+      f.dias.forEach(d => {
+        if (!d || !ESTADOS_ARRENDADO.includes(d.estado)) return;
+        const c = d.cliente || 'Sin cliente';
+        porCliente[c] ||= { cliente: c, arrendados: 0, arrFS: 0, equipos: new Set() };
+        porCliente[c].arrendados++;
+        if (d.estado === 'arrendado_fs') porCliente[c].arrFS++;
+        porCliente[c].equipos.add(f.equipo_id);
+      });
+    }
+    const productividadClientes = Object.values(porCliente)
+      .map(c => ({ cliente: c.cliente, arrendados: c.arrendados, arrFS: c.arrFS, equipos: c.equipos.size,
+        productividad: pct(c.arrendados - c.arrFS, c.arrendados) }))
+      .sort((a, b) => b.arrendados - a.arrendados);
 
-    // 4. Clients distribution
-    const clientesArriendo = db.prepare(`
-      SELECT cliente, COUNT(*) as cnt
-      FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_ARRENDADO}) AND cliente IS NOT NULL AND cliente != ''
-      GROUP BY cliente
-      ORDER BY cnt DESC
-    `).all(mes);
+    // Situación al último día del período
+    const ultimo = m.n - 1;
+    const hoy = { arrendado: 0, arrendado_fs: 0, disponible: 0, detenido: 0, sin_registro: 0, otros: 0 };
+    const disponiblesHoy = [];
+    for (const f of m.filas) {
+      const d = f.dias[ultimo];
+      if (!d) hoy.sin_registro++;
+      else if (d.estado === 'arrendado_fs') hoy.arrendado_fs++;
+      else if (ESTADOS_ARRENDADO.includes(d.estado)) hoy.arrendado++;
+      else if (ESTADOS_TALLER.includes(d.estado)) hoy.detenido++;
+      else if (d.estado === 'disponible') { hoy.disponible++; disponiblesHoy.push({ equipo_id: f.equipo_id, tipo: f.tipo }); }
+      else hoy.otros++;
+    }
 
-    // 5. Daily rentals timeline (días-equipo arrendados por fecha)
-    const dailyRentals = db.prepare(`
-      SELECT SUBSTR(fecha, 9, 2) as dia, COUNT(*) as cnt
-      FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_ARRENDADO})
-      GROUP BY fecha
-      ORDER BY fecha
-    `).all(mes);
-
-    // 6. Downtime detail (días fuera de servicio o taller y comentarios)
-    const detenciones = db.prepare(`
-      SELECT equipo_id, COUNT(*) as dias, GROUP_CONCAT(COALESCE(comentario, 'Sin comentario'), ' | ') as comentarios
-      FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_DETENIDO})
-      GROUP BY equipo_id
-      ORDER BY dias DESC
-    `).all(mes);
-
-    // 7. Mechanics locations and workload
+    // Mecánicos (se mantiene del dashboard anterior)
     const mecanicosUbicaciones = db.prepare(`
       SELECT ubicacion, COUNT(*) as cnt
       FROM registro_mecanicos
@@ -459,27 +659,129 @@ app.get('/api/stats/dashboard', (req, res) => {
       GROUP BY ubicacion
       ORDER BY cnt DESC
     `).all(mes);
-
-    // 8. Total active mechanics
     const totalMecanicos = db.prepare('SELECT COUNT(*) as cnt FROM mecanicos WHERE activo = 1').get().cnt;
 
     res.json({
-      totalEquipos,
-      daysInMonth,
-      totalPossible,
-      totalUtilizable,
-      utilizacion,
-      diasArrendados,
-      diasDetenidos,
-      byEstado,
-      clientesArriendo,
-      dailyRentals,
-      detenciones,
-      mecanicosUbicaciones,
-      totalMecanicos
+      mes, desde: per.desde, hasta: per.hasta, diasPeriodo: m.n, enCurso: per.hasta < per.finMes,
+      hubDisponible: !!hub,
+      base: { equipos: m.equiposBase, diasEquipo: m.t.base, sinRegistro: m.t.sinRegistro, cobertura: m.cobertura,
+        excluidosVenta: m.excluidos.length },
+      kpi: { disponibilidad: m.disponibilidad, utilizacion: m.utilizacion, productividad: m.productividad },
+      anterior,
+      dias: m.t,
+      diario: m.diario,
+      tendencia,
+      taller,
+      hoy, disponiblesHoy,
+      productividadEquipos, productividadClientes,
+      mecanicosUbicaciones, totalMecanicos,
     });
-
   } catch (e) {
+    console.error('[dashboard]', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Alertas: documentos (Hub), mantenciones por horómetro y detenciones prolongadas ──
+
+const DOCUMENTOS = [
+  { campo: 'venc_permiso', nombre: 'Permiso de circulación', corto: 'Permiso circ.' },
+  { campo: 'venc_soap',    nombre: 'SOAP',                   corto: 'SOAP' },
+  { campo: 'venc_rev',     nombre: 'Revisión técnica',       corto: 'Rev. técnica' },
+  { campo: 'venc_gases',   nombre: 'Análisis de gases',      corto: 'Gases' },
+];
+const ALERTA_DOC_DIAS = 30;
+const ALERTA_DOC_CRITICA_DIAS = 7;
+
+// La planilla trae fechas «d/m/aaaa» y a veces «dd-mm-aaaa»
+function parseFechaPlanilla(v) {
+  const m = String(v ?? '').trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (!m) return null;
+  return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+}
+
+app.get('/api/alertas', async (req, res) => {
+  try {
+    const hoy = hoyChile();
+    const { hub, ventaHub } = await setVentaHub();
+    const enVentaLocal = new Set(db.prepare(`
+      SELECT r.equipo_id FROM registro_diario r
+      JOIN (SELECT equipo_id, MAX(fecha) AS f FROM registro_diario WHERE fecha <= ? GROUP BY equipo_id) u
+        ON u.equipo_id = r.equipo_id AND u.f = r.fecha
+      WHERE r.estado IN (${sqlLista(ESTADOS_VENTA)})
+    `).all(hoy).map(r => r.equipo_id));
+    const fueraDeBase = id => ventaHub.has(id) || enVentaLocal.has(id);
+
+    // 1. Documentos
+    const documentos = [];
+    let docsExcluidos = 0;
+    for (const e of hub || []) {
+      const id = String(e.id || '').trim();
+      if (!id) continue;
+      const docs = [];
+      for (const d of DOCUMENTOS) {
+        const fecha = parseFechaPlanilla(e[d.campo]);
+        if (!fecha) continue;
+        const dias = diasEntre(hoy, fecha);
+        if (dias > ALERTA_DOC_DIAS) continue;
+        docs.push({ documento: d.nombre, corto: d.corto, fecha, dias,
+          severidad: dias < 0 ? 'vencido' : dias <= ALERTA_DOC_CRITICA_DIAS ? 'critico' : 'proximo' });
+      }
+      if (!docs.length) continue;
+      if (fueraDeBase(id)) { docsExcluidos++; continue; }
+      docs.sort((a, b) => a.dias - b.dias);
+      const enArriendo = minus(e.arrendado) === 'contrato';
+      documentos.push({
+        equipo_id: id, patente: e.patente || null, tipo: e.tipo || null,
+        marca: e.marca || null, modelo: e.modelo || null,
+        enArriendo, cliente: enArriendo ? (e.cliente || null) : null,
+        ubicacion: e.ubicacion || null, operativo: e.operativo || null,
+        severidad: docs[0].severidad, documentos: docs,
+        // En faena con un documento vencido es lo más urgente: el equipo está circulando así
+        prioridad: (docs[0].severidad === 'vencido' ? 0 : docs[0].severidad === 'critico' ? 2 : 4) + (enArriendo ? 0 : 1),
+      });
+    }
+    documentos.sort((a, b) => a.prioridad - b.prioridad || a.documentos[0].dias - b.documentos[0].dias);
+
+    // 2. Mantenciones por horómetro
+    const mantenciones = resumenMantenciones()
+      .filter(r => (r.alerta === 'vencida' || r.alerta === 'proxima') && !fueraDeBase(r.equipo_id))
+      .map(r => ({ equipo_id: r.equipo_id, patente: r.patente, severidad: r.alerta === 'vencida' ? 'vencido' : 'proximo',
+        tipo_mantencion: r.tipo_mantencion, horometro_actual: parseHorometroChileno(r.horometro_actual),
+        horometro_proxima: r.horometro_proxima, fecha_horometro: r.fecha_horometro,
+        horasRestantes: Math.round(r.horometro_proxima - parseHorometroChileno(r.horometro_actual)),
+        enArriendo: minus(r.contrato_estado) === 'contrato' }))
+      .sort((a, b) => a.horasRestantes - b.horasRestantes);
+
+    // 3. Equipos detenidos hace más de una semana
+    const ventana = lineaDeTiempo(sumarDias(hoy, -VENTANA_EPISODIOS_DIAS), hoy);
+    const detenciones = [];
+    for (const e of ventana.equipos) {
+      if (fueraDeBase(e.equipo_id)) continue;
+      const abierto = episodiosTaller(e.dias, ventana.fechas).find(ep => ep.abierto);
+      if (!abierto || abierto.dias <= DETENCION_PROLONGADA_DIAS) continue;
+      const estado = e.dias[e.dias.length - 1].estado;
+      detenciones.push({ equipo_id: e.equipo_id, tipo: e.tipo, estado, desde: abierto.desde, dias: abierto.dias,
+        comentario: abierto.comentarios.at(-1) || null,
+        severidad: abierto.dias > 30 ? 'vencido' : 'critico' });
+    }
+    detenciones.sort((a, b) => b.dias - a.dias);
+
+    const cuenta = (lista, sev) => lista.filter(a => a.severidad === sev).length;
+    res.json({
+      fecha: hoy, hubDisponible: !!hub, docsExcluidosVenta: docsExcluidos,
+      umbrales: { documentosDias: ALERTA_DOC_DIAS, documentosCriticoDias: ALERTA_DOC_CRITICA_DIAS,
+        mantencionHoras: ALERTA_UMBRAL_HORAS, detencionDias: DETENCION_PROLONGADA_DIAS },
+      resumen: {
+        documentos: { vencido: cuenta(documentos, 'vencido'), critico: cuenta(documentos, 'critico'), proximo: cuenta(documentos, 'proximo'),
+          vencidosEnArriendo: documentos.filter(d => d.enArriendo && d.severidad === 'vencido').length },
+        mantenciones: { vencido: cuenta(mantenciones, 'vencido'), proximo: cuenta(mantenciones, 'proximo') },
+        detenciones: { total: detenciones.length, masDeUnMes: cuenta(detenciones, 'vencido') },
+      },
+      documentos, mantenciones, detenciones,
+    });
+  } catch (e) {
+    console.error('[alertas]', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -784,35 +1086,38 @@ function registrarMantencion({ equipo_id, tipo_mantencion, horometro, fecha, ori
   return r.lastInsertRowid;
 }
 
+// Equipos + su última mantención + alerta (lo usan el listado y el centro de alertas)
+function resumenMantenciones() {
+  const rows = db.prepare(`
+    SELECT
+      e.equipo_id, e.patente, e.contrato_estado, e.horometro_actual, e.fecha_horometro,
+      m.id as mantencion_id, m.tipo_mantencion, m.horometro as mantencion_horometro,
+      m.fecha as mantencion_fecha, m.horometro_proxima
+    FROM equipos e
+    LEFT JOIN mantenciones m ON m.id = (
+      SELECT id FROM mantenciones WHERE equipo_id = e.equipo_id ORDER BY fecha DESC, id DESC LIMIT 1
+    )
+    WHERE e.activo = 1
+    ORDER BY e.equipo_id
+  `).all();
+
+  return rows.map(r => {
+    let alerta = 'sin_datos';
+    const horometroActualNum = parseHorometroChileno(r.horometro_actual);
+    if (r.horometro_proxima != null && horometroActualNum != null) {
+      const restante = r.horometro_proxima - horometroActualNum;
+      if (restante < 0) alerta = 'vencida';
+      else if (restante <= ALERTA_UMBRAL_HORAS) alerta = 'proxima';
+      else alerta = 'ok';
+    }
+    return { ...r, alerta };
+  });
+}
+
 // GET listado principal: equipos + su última mantención + alerta
 app.get('/api/mantenciones/equipos-resumen', (req, res) => {
   try {
-    const rows = db.prepare(`
-      SELECT
-        e.equipo_id, e.patente, e.contrato_estado, e.horometro_actual, e.fecha_horometro,
-        m.id as mantencion_id, m.tipo_mantencion, m.horometro as mantencion_horometro,
-        m.fecha as mantencion_fecha, m.horometro_proxima
-      FROM equipos e
-      LEFT JOIN mantenciones m ON m.id = (
-        SELECT id FROM mantenciones WHERE equipo_id = e.equipo_id ORDER BY fecha DESC, id DESC LIMIT 1
-      )
-      WHERE e.activo = 1
-      ORDER BY e.equipo_id
-    `).all();
-
-    const resumen = rows.map(r => {
-      let alerta = 'sin_datos';
-      const horometroActualNum = parseHorometroChileno(r.horometro_actual);
-      if (r.horometro_proxima != null && horometroActualNum != null) {
-        const restante = r.horometro_proxima - horometroActualNum;
-        if (restante < 0) alerta = 'vencida';
-        else if (restante <= ALERTA_UMBRAL_HORAS) alerta = 'proxima';
-        else alerta = 'ok';
-      }
-      return { ...r, alerta };
-    });
-
-    res.json(resumen);
+    res.json(resumenMantenciones());
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
