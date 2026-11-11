@@ -23,17 +23,20 @@
   // Una app embebida en otra (Inspecciones dentro de Operaciones) no repite el menú
   if (window.self !== window.top) return;
 
-  const APPS = {
+  // Direcciones de las cuatro apps. El servidor de cada app puede anteponer a
+  // este archivo «window.CYC_SUITE = {…}» con las suyas (variables de entorno),
+  // así un cambio de dominio no obliga a editar las cuatro copias.
+  const APPS = Object.assign({
     hub:   'https://cyc-hub-production.up.railway.app',
     ops:   'https://cyc-ops-production.up.railway.app',
     tasks: 'https://cyc-tasks-production.up.railway.app',
     insp:  'https://cyc-inspecciones-production.up.railway.app',
-  };
+  }, window.CYC_SUITE || {});
 
   const MENU = [
     { label: 'Inicio', icon: 'home', app: 'hub', path: '/' },
     { section: 'Áreas' },
-    { label: 'Área Comercial', icon: 'brief', children: [
+    { label: 'Área Comercial', icon: 'brief', area: 'comercial', children: [
       { label: 'Cotizador',         app: 'hub', path: '/cotizador' },
       { label: 'Envío de Flota',    app: 'hub', path: '/flota' },
       { label: 'Pipeline CRM',      app: 'hub', path: '/informe/index.html#crm' },
@@ -47,7 +50,7 @@
       { label: 'Marketing Digital', app: 'hub', path: '/marketing/index.html' },
       { label: 'Cobranza',          app: 'hub', path: '/cobranza' },
     ] },
-    { label: 'Operaciones', icon: 'wrench', children: [
+    { label: 'Operaciones', icon: 'wrench', area: 'operaciones', children: [
       { label: 'Calendario de flota',     app: 'ops', path: '/#calendario' },
       { label: 'Dashboard de operación',  app: 'ops', path: '/#dashboard' },
       { label: 'Inspección de equipos',   app: 'ops', path: '/#inspecciones' },
@@ -55,13 +58,13 @@
       { label: 'Mantenciones',            app: 'ops', path: '/#mantenciones' },
       { label: 'Gestión de recursos',     app: 'ops', path: '/#equipos' },
     ] },
-    { label: 'Inspecciones', icon: 'clip', children: [
+    { label: 'Inspecciones', icon: 'clip', area: 'inspecciones', children: [
       { label: 'Inicio',           app: 'insp', path: '/' },
       { label: 'Órdenes',          app: 'insp', path: '/ordenes' },
       { label: 'Nueva orden',      app: 'insp', path: '/ordenes/nueva' },
       { label: 'Importar equipos', app: 'insp', path: '/equipos/importar' },
     ] },
-    { label: 'Resultados y Finanzas', icon: 'chart', children: [
+    { label: 'Resultados y Finanzas', icon: 'chart', area: 'finanzas', children: [
       { label: 'Resumen',          app: 'hub', path: '/finanzas/' },
       { label: 'Ingresos',         app: 'hub', path: '/finanzas/ingresos' },
       { label: 'Costos',           app: 'hub', path: '/finanzas/costos' },
@@ -69,7 +72,7 @@
       { label: 'Datos y planillas', app: 'hub', path: '/finanzas/datos' },
       { label: 'Instructivo',      app: 'hub', path: '/finanzas/instructivo' },
     ] },
-    { label: 'Gestión de Tareas', icon: 'check', children: [
+    { label: 'Gestión de Tareas', icon: 'check', area: 'tareas', children: [
       { label: 'Kanban',        app: 'tasks', path: '/#kanban' },
       { label: 'Tabla',         app: 'tasks', path: '/#table' },
       { label: 'Calendario',    app: 'tasks', path: '/#calendar' },
@@ -161,6 +164,11 @@ html.cyc-nav-on .btn-volver-hub{display:none!important}
 #cyc-nav .cn-empty{padding:12px 10px;font-size:13px;color:var(--cn-muted)}
 
 #cyc-nav .cn-foot{border-top:1px solid var(--cn-line);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--cn-muted);white-space:nowrap}
+#cyc-nav .cn-user{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+#cyc-nav .cn-foot-txt b{display:block;font-size:13px;font-weight:600;color:var(--cyc-text,#1A1D23);overflow:hidden;text-overflow:ellipsis;max-width:190px}
+#cyc-nav .cn-foot-txt a{color:var(--cn-muted);text-decoration:underline;text-underline-offset:2px}
+#cyc-nav .cn-foot-txt a:hover{color:var(--cyc-brand-ink,#AC4A11)}
+#cyc-nav [data-area].cn-oculta{display:none!important}
 
 /* Riel: solo íconos */
 html.cyc-nav-rail #cyc-nav .cn-brand,html.cyc-nav-rail #cyc-nav .cn-search,html.cyc-nav-rail #cyc-nav .cn-label,
@@ -240,7 +248,7 @@ html.cyc-nav-rail #cyc-nav .cn-foot{justify-content:center}
         const sum = depth === 0
           ? `<summary title="${it.label}">${svg(it.icon, 'cn-ico')}<span class="cn-txt">${it.label}</span>${svg('chev', 'cn-chev')}</summary>`
           : `<summary>${it.label}${svg('chev', 'cn-chev')}</summary>`;
-        return `<details class="${depth === 0 ? 'cn-group' : ''}" data-id="${id}">${sum}<div class="cn-sub">${renderItems(it.children, depth + 1)}</div></details>`;
+        return `<details class="${depth === 0 ? 'cn-group' : ''}" data-id="${id}"${it.area ? ` data-area="${it.area}"` : ''}>${sum}<div class="cn-sub">${renderItems(it.children, depth + 1)}</div></details>`;
       }
       const n = leaves.push(it) - 1;
       return depth === 0
@@ -264,6 +272,7 @@ html.cyc-nav-rail #cyc-nav .cn-foot{justify-content:center}
       <div class="cn-search">${svg('search')}<input type="search" placeholder="Buscar sección…" aria-label="Buscar sección"><kbd>${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'}</kbd></div>
       <nav class="cn-nav">${renderItems(MENU, 0)}<div class="cn-empty" hidden>Sin resultados</div></nav>
       <div class="cn-foot"><span class="cn-foot-txt">Transportes CyC Limitada</span></div>`;
+    if (usuario) pintarUsuario();
     nav = aside.querySelector('.cn-nav');
 
     const fab = document.createElement('button');
@@ -411,7 +420,48 @@ html.cyc-nav-rail #cyc-nav .cn-foot{justify-content:center}
   window.addEventListener('hashchange', refresh);
   window.addEventListener('popstate', refresh);
 
-  window.CycNav = { refresh, setRail, open: () => root.classList.add('cyc-nav-open'), close };
+  // ── Sesión ────────────────────────────────────────────────────────────────
+  // El panel (cyc-panel.js) averigua quién está conectado y avisa acá: el menú
+  // esconde las áreas sin acceso y muestra el nombre con «Cerrar sesión».
+  let usuario = null;
+  const escapar = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function setUsuario(u) {
+    usuario = u;
+    if (aside) pintarUsuario();
+  }
+  function pintarUsuario() {
+    nav.querySelectorAll('details[data-area]').forEach(d => {
+      d.classList.toggle('cn-oculta', !usuario.areas.includes(d.dataset.area));
+    });
+    const admin = usuario.rol === 'admin'
+      ? `<a href="${APPS.hub}/auth/usuarios">Usuarios</a> · ` : '';
+    // En las otras apps se cierra primero la sesión local y de ahí la del hub
+    const salir = '/auth/logout';
+    aside.querySelector('.cn-foot').innerHTML =
+      `<span class="cn-user" style="background:${escapar(usuario.color || '#EF7834')}" title="${escapar(usuario.nombre)}">${escapar(usuario.iniciales || '')}</span>` +
+      `<span class="cn-foot-txt"><b>${escapar(usuario.nombre)}</b>${admin}<a href="${salir}">Cerrar sesión</a></span>`;
+  }
+
+  // Nombre de la sección abierta tal como aparece en el menú («Operaciones ›
+  // Calendario de flota»). Lo usa el panel para decir sobre qué página se comenta.
+  function actual() {
+    if (!nav) return '';
+    const a = nav.querySelector('a.cn-active');
+    if (!a) return '';
+    const ruta = parentsOf(a).reverse().map(d => d.querySelector(':scope>summary').textContent.trim());
+    return [...ruta, a.textContent.trim()].join(' › ');
+  }
+
+  // El panel de notificaciones vive solo en el hub y se carga desde ahí.
+  function cargarPanel() {
+    const s = document.createElement('script');
+    s.src = (CURRENT === 'hub' ? '' : APPS.hub) + '/cyc-panel.js';
+    s.async = true;
+    document.head.appendChild(s);
+  }
+
+  window.CycNav = { refresh, setRail, setUsuario, actual, open: () => root.classList.add('cyc-nav-open'), close };
+  cargarPanel();
 
   if (document.body) build();
   else document.addEventListener('DOMContentLoaded', build);

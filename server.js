@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { instalarAcceso, cabecerasHub, ticketPara } from './cyc-auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -49,9 +50,12 @@ const SQL_DETENIDO  = sqlLista(ESTADOS_DETENIDO);
 
 const ALERTA_UMBRAL_HORAS = 150;
 const HUB_URL = process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app';
+const INSPECCIONES_URL = (process.env.CYC_INSPECCIONES_URL || 'https://cyc-inspecciones-production.up.railway.app').replace(/\/$/, '');
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
+// El acceso va antes que los archivos: si no, la página se serviría sin sesión.
+instalarAcceso(app, { nombre: 'ops', area: 'operaciones', navJs: join(__dirname, 'public', 'cyc-nav.js') });
 app.use(express.static(join(__dirname, 'public')));
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -60,8 +64,18 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 app.get('/api/config', (req, res) => {
   res.json({
     cycHubUrl: HUB_URL,
-    cycInspeccionesUrl: process.env.CYC_INSPECCIONES_URL || 'https://cyc-inspecciones-production.up.railway.app'
+    cycInspeccionesUrl: INSPECCIONES_URL
   });
+});
+
+// Dirección para abrir Inspecciones dentro del iframe. Inspecciones tiene su
+// propio control de acceso; como dentro de un iframe no puede pasar por el
+// hub, se le entrega un ticket de un minuto a nombre de quien está conectado.
+app.get('/api/inspecciones/url', (req, res) => {
+  const u = req.usuario;
+  if (!u) return res.json({ url: INSPECCIONES_URL });                 // login apagado
+  if (!(u.areas || []).includes('inspecciones')) return res.json({ url: null, error: 'No tienes acceso a Inspecciones' });
+  res.json({ url: `${INSPECCIONES_URL}/auth/callback?ticket=${encodeURIComponent(ticketPara(u, 'insp'))}&next=%2F` });
 });
 
 
@@ -114,7 +128,7 @@ app.delete('/api/equipos/:id', (req, res) => {
 // POST sync from cyc-hub
 app.post('/api/equipos/sync', async (req, res) => {
   try {
-    const response = await fetch(`${HUB_URL}/informe/api/data`);
+    const response = await fetch(`${HUB_URL}/informe/api/data`, { headers: cabecerasHub() });
     if (!response.ok) throw new Error(`Hub responded ${response.status}`);
     const data = await response.json();
 
@@ -151,7 +165,7 @@ app.post('/api/equipos/sync', async (req, res) => {
     // Also sync active contracts to pre-fill calendar
     let contractsFilled = 0;
     try {
-      const ctRes = await fetch(`${HUB_URL}/arriendo/contratos`);
+      const ctRes = await fetch(`${HUB_URL}/arriendo/contratos`, { headers: cabecerasHub() });
       if (ctRes.ok) {
         const contratos = await ctRes.json();
         const upsertStmt = db.prepare(`
@@ -377,7 +391,7 @@ app.get('/api/stats', (req, res) => {
 // Proxy route for contracts from CyC Hub
 app.get('/api/contratos', async (req, res) => {
   try {
-    const response = await fetch(`${HUB_URL}/arriendo/contratos`);
+    const response = await fetch(`${HUB_URL}/arriendo/contratos`, { headers: cabecerasHub() });
     if (!response.ok) throw new Error(`Hub responded ${response.status}`);
     const data = await response.json();
     res.json(data);
@@ -443,7 +457,7 @@ let cacheHub = { en: 0, equipos: null };
 async function flotaHub() {
   if (cacheHub.equipos && Date.now() - cacheHub.en < 5 * 60 * 1000) return cacheHub.equipos;
   try {
-    const r = await fetch(`${HUB_URL}/informe/api/data`, { signal: AbortSignal.timeout(8000) });
+    const r = await fetch(`${HUB_URL}/informe/api/data`, { headers: cabecerasHub(), signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw new Error(`Hub respondió ${r.status}`);
     const data = await r.json();
     cacheHub = { en: Date.now(), equipos: data.flota?.equipos || [] };
