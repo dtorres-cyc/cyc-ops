@@ -2305,7 +2305,11 @@
       } else if (tabId === 'inspecciones') {
         const iframe = document.getElementById('iframe-inspecciones');
         if (iframe && !iframe.getAttribute('src')) {
-          iframe.src = config.cycInspeccionesUrl;
+          // El servidor entrega la dirección con un ticket de sesión para Inspecciones
+          fetch('/api/inspecciones/url').then(r => r.json()).then(d => {
+            if (d.url) iframe.src = d.url;
+            else iframe.srcdoc = '<p style="font-family:sans-serif;padding:32px;color:#4A535F">No tienes acceso a Inspecciones. Si lo necesitas, pídeselo a Diego.</p>';
+          }).catch(() => { iframe.src = config.cycInspeccionesUrl; });
         }
       }
     }
