@@ -48,7 +48,10 @@
         { label: 'Alertas',             app: 'hub', path: '/informe/index.html#alertas' },
       ] },
       { label: 'Marketing Digital', app: 'hub', path: '/marketing/index.html' },
-      { label: 'Cobranza',          app: 'hub', path: '/cobranza' },
+      { label: 'Cobranza', children: [
+        { label: 'Recordatorios de pago', app: 'hub', path: '/cobranza' },
+        { label: 'Cuadro de cobranza',    app: 'hub', path: '/cobranza/cuadro.html' },
+      ] },
     ] },
     { label: 'Operaciones', icon: 'wrench', area: 'operaciones', children: [
       { label: 'Calendario de flota',     app: 'ops', path: '/#calendario' },
@@ -75,6 +78,7 @@
     ] },
     { label: 'Gestión de Tareas', icon: 'check', area: 'tareas', children: [
       { label: 'Kanban',        app: 'tasks', path: '/#kanban' },
+      { label: 'Sprint',        app: 'tasks', path: '/#sprint' },
       { label: 'Tabla',         app: 'tasks', path: '/#table' },
       { label: 'Calendario',    app: 'tasks', path: '/#calendar' },
       { label: 'Gantt',         app: 'tasks', path: '/#gantt' },
