@@ -1,0 +1,93 @@
+/* Minutas de operaciones (panel #panel-minutas). Usa los alias de color de
+   index.html, que apuntan a cyc-tokens.css. Pensado primero para el celular:
+   la minuta diaria se llena ahí. */
+
+#panel-minutas .content-header { flex-wrap: wrap; gap: 12px; }
+.mn-tabs { display: flex; border: 1px solid var(--border); border-radius: var(--cyc-r-pill); overflow: hidden; background: var(--bg-card); }
+.mn-tabs button { background: transparent; border: 0; border-right: 1px solid var(--border); padding: 8px 16px; font: inherit; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+.mn-tabs button:last-child { border-right: 0; }
+.mn-tabs button.active { background: var(--accent); color: #fff; }
+
+.mn { max-width: 1100px; width: 100%; margin: 0 auto; }
+.mn-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px; }
+.mn-card h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mn-count { background: var(--bg-card-hover); color: var(--text-secondary); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: var(--cyc-r-pill); }
+.mn-vacio { color: var(--text-muted); font-size: 13px; padding: 4px 0; }
+.mn-nota { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.mn-texto { font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.mn-aviso { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 16px; border-radius: var(--radius); border: 1px solid var(--border); border-left: 4px solid var(--st-mantencion); background: var(--bg-card); font-size: 14px; }
+.mn-aviso.lectura { border-left-color: var(--text-muted); }
+.mn-aviso span { flex: 1; min-width: 180px; }
+
+/* Indicadores del estado actual */
+.mn-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.mn-kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.mn-kpi b { display: block; font-size: 28px; font-weight: 800; line-height: 1.1; }
+.mn-kpi small { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); font-weight: 600; }
+.mn-kpi.alerta b { color: var(--st-fuera-servicio); }
+
+/* Filas de listas (detenidos, repuestos, acuerdos) */
+.mn-fila { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-top: 1px solid var(--border); }
+.mn-fila:first-of-type { border-top: 0; }
+.mn-fila-cuerpo { flex: 1; min-width: 0; }
+.mn-fila-titulo { font-weight: 700; font-size: 14px; overflow-wrap: anywhere; }
+.mn-fila-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; overflow-wrap: anywhere; }
+.mn-fila-lado { text-align: right; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.mn-pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: var(--cyc-r-pill); background: var(--bg-card-hover); color: var(--text-secondary); white-space: nowrap; }
+.mn-pill.rojo { background: var(--st-fuera-servicio-bg); color: var(--st-fuera-servicio); }
+.mn-pill.ambar { background: var(--st-mantencion-bg); color: var(--accent-ink); }
+.mn-pill.verde { background: var(--st-arrendado-bg); color: var(--st-arrendado); }
+.mn-check { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; margin-top: 1px; }
+.mn-fila.cumplido .mn-fila-titulo { text-decoration: line-through; color: var(--text-secondary); font-weight: 500; }
+
+/* Formulario de la minuta */
+.mn-form label.mn-lbl { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); margin-bottom: 6px; }
+.mn-form input[type=text], .mn-form input[type=date], .mn-form select, .mn-form textarea {
+  width: 100%; padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-primary); font: inherit; font-size: 16px; /* 16px: el iPhone no hace zoom al enfocar */ min-width: 0; }
+.mn-form textarea { min-height: 84px; resize: vertical; }
+.mn-form input:focus, .mn-form select:focus, .mn-form textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.mn-form :disabled { opacity: .7; cursor: not-allowed; }
+.mn-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mn-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.mn-chip { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--cyc-r-pill); font-size: 14px; font-weight: 600; cursor: pointer; user-select: none; background: var(--bg-card); }
+.mn-chip input { accent-color: var(--accent); width: 16px; height: 16px; }
+.mn-chip:has(input:checked) { border-color: var(--accent); background: var(--accent-glow); }
+.mn-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; display: grid; gap: 10px; grid-template-columns: 1.1fr 1.6fr 1fr 1fr auto; align-items: end; background: var(--bg-primary); }
+.mn-item.acuerdo { grid-template-columns: 2.2fr 1fr 1fr auto; }
+.mn-item > div { min-width: 0; }
+.mn-item .mn-lbl { margin-bottom: 4px; }
+.mn-quitar { background: transparent; border: 1px solid var(--border); border-radius: var(--cyc-r-pill); width: 40px; height: 40px; cursor: pointer; color: var(--text-secondary); display: inline-flex; align-items: center; justify-content: center; }
+.mn-quitar:hover { color: var(--st-fuera-servicio); border-color: var(--st-fuera-servicio); }
+.mn-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.mn-guardar { position: sticky; bottom: 0; background: var(--bg-primary); padding: 12px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--border); z-index: 2; }
+.mn-guardar .btn-primary { padding: 12px 28px; font-size: 15px; font-weight: 700; }
+
+/* Historial */
+.mn-filtros { display: grid; grid-template-columns: 1fr 1.4fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.mn-dia-falta { display: flex; align-items: center; gap: 10px; padding: 10px 16px; margin-bottom: 10px; border: 1px dashed var(--st-fuera-servicio); border-radius: var(--radius); color: var(--st-fuera-servicio); font-size: 13px; font-weight: 600; background: var(--st-fuera-servicio-bg); }
+details.mn-minuta { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; }
+details.mn-minuta summary { list-style: none; cursor: pointer; padding: 14px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+details.mn-minuta summary::-webkit-details-marker { display: none; }
+.mn-sum-fecha { font-weight: 700; font-size: 14px; text-transform: capitalize; }
+.mn-sum-datos { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+.mn-detalle { padding: 0 16px 16px; border-top: 1px solid var(--border); }
+.mn-detalle h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-secondary); margin: 16px 0 6px; }
+
+@media (max-width: 768px) {
+  #panel-minutas .content-header { padding: 14px 16px; }
+  #panel-minutas .tab-content-inner { padding: 16px; }
+  .mn-tabs { width: 100%; }
+  .mn-tabs button { flex: 1; padding: 10px 6px; }
+  .mn-kpis { grid-template-columns: 1fr 1fr; }
+  .mn-card { padding: 14px; }
+  .mn-item, .mn-item.acuerdo { grid-template-columns: 1fr 1fr; }
+  .mn-item .mn-ancho { grid-column: 1 / -1; }
+  .mn-item .mn-quitar { justify-self: end; grid-column: 1 / -1; }
+  .mn-filtros { grid-template-columns: 1fr 1fr; }
+  .mn-sum-datos { margin-left: 0; width: 100%; }
+  .mn-guardar .btn-primary { flex: 1; justify-content: center; }
+  /* El botón flotante del menú común queda abajo a la izquierda: se le deja su espacio */
+  html.cyc-nav-on .mn-guardar { padding-left: 68px; }
+}

@@ -7,6 +7,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { instalarAcceso, cabecerasHub, ticketPara } from './cyc-auth.js';
+import { instalarMinutas } from './minutas.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
@@ -1285,6 +1286,10 @@ app.post('/api/mantenciones/import', upload.single('file'), (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+// ─── MINUTAS DE OPERACIONES ──────────────────────────────────────────────────
+// Rutas /api/minutas… (ver minutas.js)
+instalarMinutas(app, db);
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {

@@ -85,3 +85,53 @@ CREATE TABLE IF NOT EXISTS mantenciones (
 );
 CREATE INDEX IF NOT EXISTS idx_mant_equipo ON mantenciones(equipo_id, fecha DESC);
 
+
+-- ── Minutas de operaciones ──────────────────────────────────────────────────
+-- Lo conversado en las reuniones del taller (ver minutas.js).
+-- Una sola minuta por fecha y tipo.
+CREATE TABLE IF NOT EXISTS minutas (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  fecha            TEXT NOT NULL,                 -- día de la reunión (AAAA-MM-DD)
+  tipo             TEXT NOT NULL,                 -- diaria | lunes | presentacion
+  autor            TEXT,                          -- quien la registra (normalmente Cris)
+  asistentes       TEXT,                          -- nombres separados por coma
+  trabajos_del_dia TEXT,
+  novedades        TEXT,                          -- faena, clientes, personal
+  created_at       TEXT DEFAULT (datetime('now')),
+  updated_at       TEXT DEFAULT (datetime('now')),
+  UNIQUE(fecha, tipo)
+);
+
+-- Equipos detenidos según la minuta. equipo_id es el de la tabla equipos.
+CREATE TABLE IF NOT EXISTS minuta_detenidos (
+  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+  minuta_id          INTEGER NOT NULL REFERENCES minutas(id),
+  equipo_id          TEXT NOT NULL,
+  causa              TEXT NOT NULL,
+  desde              TEXT,                        -- desde cuándo está detenido
+  estimado_operativo TEXT                         -- cuándo se espera que vuelva a operar
+);
+CREATE INDEX IF NOT EXISTS idx_minuta_detenidos ON minuta_detenidos(minuta_id);
+
+-- Repuestos pendientes según la minuta
+CREATE TABLE IF NOT EXISTS minuta_repuestos (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  minuta_id      INTEGER NOT NULL REFERENCES minutas(id),
+  equipo_id      TEXT,
+  repuesto       TEXT NOT NULL,
+  estado         TEXT NOT NULL DEFAULT 'por pedir', -- por pedir | pedido | en tránsito | recibido
+  fecha_estimada TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_minuta_repuestos ON minuta_repuestos(minuta_id);
+
+-- Acuerdos de la reunión: texto, responsable y fecha comprometida
+CREATE TABLE IF NOT EXISTS minuta_acuerdos (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  minuta_id   INTEGER NOT NULL REFERENCES minutas(id),
+  texto       TEXT NOT NULL,
+  responsable TEXT NOT NULL,
+  fecha       TEXT NOT NULL,
+  cumplido    INTEGER DEFAULT 0,
+  cumplido_en TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_minuta_acuerdos ON minuta_acuerdos(minuta_id);
