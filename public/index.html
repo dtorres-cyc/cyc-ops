@@ -12,6 +12,7 @@
   <script src="/cyc-nav.js" data-app="ops"></script>
   <link rel="icon" href="/isotipo-cyc-simple.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/minutas.css">
   <style>
     /* Los nombres de abajo son alias hacia cyc-tokens.css, la hoja compartida
        por las cuatro apps. Se mantienen para no reescribir 3.000 líneas de
@@ -1429,6 +1430,9 @@
         <button class="menu-item" data-tab="mecanicos" onclick="switchTab('mecanicos')">
           <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Cal. Mecánicos
         </button>
+        <button class="menu-item" data-tab="minutas" onclick="switchTab('minutas')">
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M8 11h8M8 15h8M8 19h5"/></svg> Minutas
+        </button>
         <button class="menu-item" data-tab="ordenes" onclick="switchTab('ordenes')">
           <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Órdenes de Trabajo <span class="badge-menu">Soon</span>
         </button>
@@ -1840,6 +1844,25 @@
             <p class="cs-desc">
               Este módulo permitirá emitir, asignar y registrar el avance de órdenes de mantención correctiva y preventiva, asociando repuestos, mecánicos responsables y horas de detención de equipos.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: MINUTAS DE OPERACIONES (lógica en /minutas.js, estilos en /minutas.css) -->
+      <div class="tab-panel" id="panel-minutas">
+        <div class="content-header">
+          <h1 class="page-title"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M8 11h8M8 15h8M8 19h5"/></svg> Minutas de Operaciones</h1>
+          <div class="mn-tabs">
+            <button type="button" class="active" data-mn="estado" onclick="Minutas.ver('estado')">Estado actual</button>
+            <button type="button" data-mn="nueva" onclick="Minutas.ver('nueva')">Nueva minuta</button>
+            <button type="button" data-mn="historial" onclick="Minutas.ver('historial')">Historial</button>
+          </div>
+        </div>
+        <div class="tab-content-inner">
+          <div class="mn">
+            <div id="mnEstado"></div>
+            <form id="mnForm" class="mn-form" hidden></form>
+            <div id="mnHistorial" hidden></div>
           </div>
         </div>
       </div>
@@ -2302,6 +2325,8 @@
         loadUbicaciones();
       } else if (tabId === 'mantenciones') {
         loadMantenciones();
+      } else if (tabId === 'minutas') {
+        Minutas.abrir();
       } else if (tabId === 'inspecciones') {
         const iframe = document.getElementById('iframe-inspecciones');
         if (iframe && !iframe.getAttribute('src')) {
@@ -4156,5 +4181,6 @@
       }
     }
   </script>
+  <script src="/minutas.js"></script>
 </body>
 </html>

@@ -55,6 +55,7 @@
       { label: 'Dashboard de operación',  app: 'ops', path: '/#dashboard' },
       { label: 'Inspección de equipos',   app: 'ops', path: '/#inspecciones' },
       { label: 'Calendario de mecánicos', app: 'ops', path: '/#mecanicos' },
+      { label: 'Minutas',                 app: 'ops', path: '/#minutas' },
       { label: 'Mantenciones',            app: 'ops', path: '/#mantenciones' },
       { label: 'Gestión de recursos',     app: 'ops', path: '/#equipos' },
     ] },
