@@ -1330,6 +1330,69 @@
       .od-al-ctx { grid-column: 2; align-items: flex-start; padding: 0 0 11px; }
       .od-al-ctx small { text-align: left; }
     }
+
+    /* ─── Calendarios en pantallas angostas ──────────────────────────
+       El panel (.tab-panel) hace scroll vertical, y por eso también
+       horizontal: cualquier fila más ancha que la pantalla arrastraba el
+       panel entero (título, KPI, leyenda) hacia el costado. Ahora los
+       filtros se acomodan al ancho y lo único que se desplaza hacia el
+       costado es la grilla de días, dentro de su propio contenedor. */
+    @media (max-width: 900px) {
+      .tab-panel { overflow-x: hidden; }
+
+      .content-header { flex-wrap: wrap; gap: 10px; padding: 14px 16px; }
+
+      .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+      .controls-left { justify-content: space-between; }
+      .controls-left .month-nav { flex: 1; justify-content: space-between; }
+      .controls-right {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+      }
+      .controls-right > *,
+      .controls-right .filter-select,
+      .ms-wrap, .ms-toggle { width: 100%; min-width: 0; }
+      .ms-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .ms-panel { min-width: 0; width: max(100%, min(300px, calc(100vw - 32px))); }
+
+      /* iOS hace zoom al enfocar un campo con letra menor a 16px */
+      .filter-select, .modal-input, .modal select, .modal textarea { font-size: 16px; }
+
+      .legend { gap: 6px 12px; }
+
+      /* La grilla scrollea en ambos ejes dentro de su caja: así el
+         encabezado de días y la columna de nombres quedan fijos. */
+      .calendar-container {
+        max-height: 70vh;
+        max-height: 70dvh;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+      }
+
+      /* Columna fija de nombres más angosta para dejar más días a la vista */
+      .calendar-table thead th.th-equipo { min-width: 96px; padding-left: 10px; }
+      .td-equipo { padding: 8px 10px !important; }
+      .calendar-flota { --w-equipo: 88px; }
+      /* Las celdas de Tipo/Patente/Cliente/Ubicación dejan de ser fijas
+         (regla de arriba), pero el encabezado conservaba su «left» fijo por
+         especificidad y quedaba corrido respecto de las filas. El encabezado
+         sigue fijo arriba al bajar, solo pierde el anclaje lateral. */
+      .calendar-table thead th.th-info { left: auto; box-shadow: 0 1px 0 var(--border), 0 4px 8px -6px rgba(15,23,42,0.35); }
+
+      /* Modales: caben en pantalla y hacen scroll por dentro */
+      .modal { width: calc(100vw - 24px); max-width: none; max-height: calc(100dvh - 24px); overflow-y: auto; }
+      .modal-footer { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 600px) {
+      .calendar-table thead th.th-equipo { min-width: 84px; }
+      /* En el teléfono, Tipo y Patente empujaban los días ~200px a la
+         derecha; quedan Cliente y Ubicación, que son los que cambian. */
+      .calendar-flota .col-tipo, .calendar-flota .col-patente { display: none; }
+      .calendar-flota { --w-equipo: 80px; }
+    }
   </style>
 </head>
 <body>
