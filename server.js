@@ -32,7 +32,10 @@ db.exec(schema);
 // Migración defensiva: agregar columnas nuevas a `equipos` si no existen aún
 // (better-sqlite3 falla si se agrega una columna que ya existe, por eso no va en schema.sql)
 const equiposCols = new Set(db.prepare('PRAGMA table_info(equipos)').all().map(c => c.name));
-for (const [col, type] of [['horometro_actual', 'TEXT'], ['fecha_horometro', 'TEXT'], ['contrato_estado', 'TEXT'], ['anio', 'TEXT']]) {
+// baja_fecha / baja_motivo: equipo dado de baja (devuelto a un tercero, vendido…). No se borra nada:
+// el equipo y su historial quedan en la base, solo deja de aparecer desde el mes de la baja.
+for (const [col, type] of [['horometro_actual', 'TEXT'], ['fecha_horometro', 'TEXT'], ['contrato_estado', 'TEXT'], ['anio', 'TEXT'],
+                           ['baja_fecha', 'TEXT'], ['baja_motivo', 'TEXT']]) {
   if (!equiposCols.has(col)) db.exec(`ALTER TABLE equipos ADD COLUMN ${col} ${type}`);
 }
 // Ubicación del equipo por día. Solo se agrega la columna: los registros existentes quedan intactos.
@@ -48,6 +51,14 @@ const ESTADOS_DETENIDO  = ['fuera_servicio', 'en_taller', 'arrendado_fs'];
 const sqlLista = arr => arr.map(e => `'${e}'`).join(', ');
 const SQL_ARRENDADO = sqlLista(ESTADOS_ARRENDADO);
 const SQL_DETENIDO  = sqlLista(ESTADOS_DETENIDO);
+
+// Equipos que eran parte del parque en un mes (AAAA-MM): los activos más los dados de baja
+// en un mes posterior. Así los meses anteriores a la baja conservan sus equipos y su historial.
+const SQL_EQUIPO_EN_MES = mesParam =>
+  `(e.activo = 1 OR (e.baja_fecha IS NOT NULL AND substr(e.baja_fecha, 1, 7) > ${mesParam}))`;
+// Para filtrar registro_diario: deja fuera los registros de equipos ya dados de baja en ese mes (parámetro ?)
+const SQL_FUERA_DEL_MES = `equipo_id NOT IN (SELECT equipo_id FROM equipos
+  WHERE activo = 0 AND baja_fecha IS NOT NULL AND substr(baja_fecha, 1, 7) <= ?)`;
 
 const ALERTA_UMBRAL_HORAS = 150;
 const HUB_URL = process.env.CYC_HUB_URL || 'https://cyc-hub-production.up.railway.app';
@@ -107,7 +118,7 @@ app.post('/api/equipos', (req, res) => {
         modelo = COALESCE(excluded.modelo, modelo),
         patente = COALESCE(excluded.patente, patente),
         propietario = COALESCE(excluded.propietario, propietario),
-        activo = 1
+        activo = 1, baja_fecha = NULL, baja_motivo = NULL
     `);
     stmt.run(equipo_id.trim(), tipo || null, marca || null, modelo || null, patente || null, propietario || null);
     res.json({ ok: true });
@@ -116,10 +127,51 @@ app.post('/api/equipos', (req, res) => {
   }
 });
 
-// DELETE equipo (soft delete)
+// GET equipos dados de baja (para mostrarlos en los meses anteriores a la baja y poder reactivarlos)
+app.get('/api/equipos/bajas', (req, res) => {
+  try {
+    res.json(db.prepare('SELECT * FROM equipos WHERE activo = 0 AND baja_fecha IS NOT NULL ORDER BY baja_fecha DESC, equipo_id').all());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Dar de baja un equipo: deja de aparecer en el calendario desde el mes de la baja.
+// No borra el equipo ni sus registros; la sincronización con el Hub no lo reactiva.
+function darDeBaja(id, fecha, motivo) {
+  const r = db.prepare(`UPDATE equipos SET activo = 0, baja_fecha = ?, baja_motivo = ? WHERE id = ?`)
+    .run(fecha, motivo, id);
+  return r.changes > 0;
+}
+
+app.post('/api/equipos/:id/baja', (req, res) => {
+  try {
+    const fecha = req.body?.fecha || hoyChile();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return res.status(400).json({ error: 'fecha inválida (AAAA-MM-DD)' });
+    const motivo = String(req.body?.motivo || '').trim().slice(0, 200) || null;
+    if (!motivo) return res.status(400).json({ error: 'motivo requerido' });
+    if (!darDeBaja(req.params.id, fecha, motivo)) return res.status(404).json({ error: 'Equipo no encontrado' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Reactivar un equipo dado de baja (por si se dio de baja por error o vuelve al parque)
+app.post('/api/equipos/:id/reactivar', (req, res) => {
+  try {
+    const r = db.prepare('UPDATE equipos SET activo = 1, baja_fecha = NULL, baja_motivo = NULL WHERE id = ?').run(req.params.id);
+    if (!r.changes) return res.status(404).json({ error: 'Equipo no encontrado' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE equipo: se mantiene por compatibilidad y equivale a darlo de baja hoy. No borra nada.
 app.delete('/api/equipos/:id', (req, res) => {
   try {
-    db.prepare('UPDATE equipos SET activo = 0 WHERE id = ?').run(req.params.id);
+    if (!darDeBaja(req.params.id, hoyChile(), 'Eliminado del parque')) return res.status(404).json({ error: 'Equipo no encontrado' });
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -149,7 +201,8 @@ app.post('/api/equipos/sync', async (req, res) => {
         marca = COALESCE(excluded.marca, marca),
         modelo = COALESCE(excluded.modelo, modelo),
         anio = COALESCE(excluded.anio, anio),
-        activo = 1
+        -- Un equipo dado de baja a mano sigue de baja aunque aún figure en el Hub
+        activo = CASE WHEN baja_fecha IS NULL THEN 1 ELSE activo END
     `);
 
     const insertMany = db.transaction((items) => {
@@ -175,6 +228,7 @@ app.post('/api/equipos/sync', async (req, res) => {
           ON CONFLICT(equipo_id, fecha) DO NOTHING
         `);
 
+        const deBaja = new Set(db.prepare('SELECT equipo_id FROM equipos WHERE activo = 0 AND baja_fecha IS NOT NULL').all().map(r => r.equipo_id));
         const today = new Date();
         const fillContracts = db.transaction((cts) => {
           for (const ct of cts) {
@@ -182,7 +236,7 @@ app.post('/api/equipos/sync', async (req, res) => {
             const start = new Date(ct.fechaInicio);
             const end = new Date(ct.fechaTermino);
             for (const ce of (ct.contratoEquipos || [])) {
-              if (!ce.activo || !ce.equipoId) continue;
+              if (!ce.activo || !ce.equipoId || deBaja.has(ce.equipoId.trim())) continue;
               // Fill from max(start, first of current month) to min(end, today)
               const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
               const fillFrom = start > monthStart ? start : monthStart;
@@ -269,7 +323,7 @@ app.get('/api/calendario/resumen', (req, res) => {
         (SELECT r.ubicacion FROM registro_diario r WHERE r.equipo_id = e.equipo_id AND r.fecha <= @fecha
            AND r.ubicacion IS NOT NULL AND r.ubicacion != '' ORDER BY r.fecha DESC LIMIT 1) AS ubicacion
       FROM equipos e
-      WHERE e.activo = 1
+      WHERE ${SQL_EQUIPO_EN_MES('substr(@fecha, 1, 7)')}
     `).all({ fecha });
     res.json(filas);
   } catch (e) {
@@ -280,10 +334,15 @@ app.get('/api/calendario/resumen', (req, res) => {
 // PUT batch update (for drag selection)
 app.put('/api/calendario/batch', (req, res) => {
   try {
-    const { equipo_id, fechas, estado, cliente, contrato, comentario, ubicacion } = req.body;
-    if (!equipo_id || !fechas || !Array.isArray(fechas)) {
-      return res.status(400).json({ error: 'equipo_id y fechas[] requeridos' });
+    // Acepta un equipo (equipo_id) o varios (equipo_ids): se aplica a cada equipo × cada fecha
+    const { equipo_id, equipo_ids, fechas, estado, cliente, contrato, comentario, ubicacion } = req.body;
+    const ids = Array.isArray(equipo_ids) ? equipo_ids : (equipo_id ? [equipo_id] : []);
+    if (!ids.length || !Array.isArray(fechas) || !fechas.length) {
+      return res.status(400).json({ error: 'equipo_ids[] (o equipo_id) y fechas[] requeridos' });
     }
+    if (ids.some(id => typeof id !== 'string' || !id.trim())) return res.status(400).json({ error: 'equipo_ids inválidos' });
+    if (fechas.some(f => !/^\d{4}-\d{2}-\d{2}$/.test(f))) return res.status(400).json({ error: 'fechas inválidas (AAAA-MM-DD)' });
+    if (ids.length * fechas.length > 20000) return res.status(400).json({ error: 'Selección demasiado grande' });
     if (estado && !ESTADOS_FLOTA.includes(estado)) return res.status(400).json({ error: `Estado desconocido: ${estado}` });
 
     const stmt = db.prepare(`
@@ -298,14 +357,16 @@ app.put('/api/calendario/batch', (req, res) => {
         updated_at = datetime('now')
     `);
 
-    const batchUpdate = db.transaction((dates) => {
-      for (const f of dates) {
-        stmt.run(equipo_id, f, estado || 'disponible', cliente || null, contrato || null, comentario || null, ubicacion || null);
+    const batchUpdate = db.transaction(() => {
+      for (const id of ids) {
+        for (const f of fechas) {
+          stmt.run(id, f, estado || 'disponible', cliente || null, contrato || null, comentario || null, ubicacion || null);
+        }
       }
     });
 
-    batchUpdate(fechas);
-    res.json({ ok: true, updated: fechas.length });
+    batchUpdate();
+    res.json({ ok: true, updated: ids.length * fechas.length });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -318,7 +379,7 @@ app.get('/api/stats', (req, res) => {
     const mes = req.query.mes;
     if (!mes) return res.status(400).json({ error: 'Parámetro mes requerido' });
 
-    const totalEquipos = db.prepare('SELECT COUNT(*) as cnt FROM equipos WHERE activo = 1').get().cnt;
+    const totalEquipos = db.prepare(`SELECT COUNT(*) as cnt FROM equipos e WHERE ${SQL_EQUIPO_EN_MES('?')}`).get(mes).cnt;
 
     // Days in month
     const [year, month] = mes.split('-').map(Number);
@@ -330,9 +391,9 @@ app.get('/api/stats', (req, res) => {
         estado,
         COUNT(*) as cnt
       FROM registro_diario
-      WHERE fecha LIKE ? || '%'
+      WHERE fecha LIKE ? || '%' AND ${SQL_FUERA_DEL_MES}
       GROUP BY estado
-    `).all(mes);
+    `).all(mes, mes);
 
     const byEstado = {};
     let totalRegistros = 0;
@@ -353,23 +414,23 @@ app.get('/api/stats', (req, res) => {
     const topFS = db.prepare(`
       SELECT equipo_id, COUNT(*) as dias
       FROM registro_diario
-      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_DETENIDO})
+      WHERE fecha LIKE ? || '%' AND estado IN (${SQL_DETENIDO}) AND ${SQL_FUERA_DEL_MES}
       GROUP BY equipo_id
       ORDER BY dias DESC
       LIMIT 5
-    `).all(mes);
+    `).all(mes, mes);
 
     // Equipment never rented
     const equiposSinArriendo = db.prepare(`
       SELECT e.equipo_id, e.tipo
       FROM equipos e
-      WHERE e.activo = 1
+      WHERE ${SQL_EQUIPO_EN_MES('?')}
         AND e.equipo_id NOT IN (
           SELECT DISTINCT equipo_id FROM registro_diario
           WHERE fecha LIKE ? || '%' AND estado IN (${SQL_ARRENDADO})
         )
       ORDER BY e.equipo_id
-    `).all(mes);
+    `).all(mes, mes);
 
     res.json({
       totalEquipos,
@@ -474,7 +535,10 @@ const esVentaHub = e => minus(e.cliente) === 'venta' || minus(e.arrendado) === '
 // Estado de cada equipo activo, día a día, entre dos fechas
 function lineaDeTiempo(desde, hasta) {
   const fechas = rangoFechas(desde, hasta);
-  const equipos = db.prepare('SELECT equipo_id, tipo, marca, modelo FROM equipos WHERE activo = 1 ORDER BY equipo_id').all();
+  // Igual que con los equipos en venta: un equipo dado de baja cuenta solo en los períodos
+  // que terminan antes de su baja (los meses anteriores conservan su historial).
+  const equipos = db.prepare(`SELECT equipo_id, tipo, marca, modelo FROM equipos
+    WHERE activo = 1 OR (baja_fecha IS NOT NULL AND baja_fecha > ?) ORDER BY equipo_id`).all(hasta);
   const previos = db.prepare(`
     SELECT r.equipo_id, r.estado, r.cliente FROM registro_diario r
     JOIN (SELECT equipo_id, MAX(fecha) AS f FROM registro_diario WHERE fecha < ? GROUP BY equipo_id) u

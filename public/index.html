@@ -780,6 +780,36 @@
       outline-offset: 1px;
     }
 
+    .calendar-flota .day-cell { cursor: pointer; user-select: none; }
+
+    .calendar-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0;
+      padding: 0 28px 10px;
+    }
+
+    /* Botón para dar de baja: aparece al pasar sobre la fila */
+    .td-equipo-inner { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+    .baja-btn {
+      background: none; border: none; padding: 2px; cursor: pointer; line-height: 0;
+      color: var(--text-muted); opacity: 0; transition: var(--transition);
+    }
+    .baja-btn .ico { width: 14px; height: 14px; }
+    .calendar-table tbody tr:hover .baja-btn, .baja-btn:focus-visible { opacity: 1; }
+    .baja-btn:hover { color: var(--st-fuera-servicio); }
+    @media (hover: none) { .baja-btn { opacity: 0.6; } }
+
+    /* Equipo dado de baja (solo se ve en meses anteriores a la baja) */
+    .row-baja .equipo-name { color: var(--text-muted); text-decoration: line-through; }
+    .equipo-baja-tag { font-size: 10px; color: var(--text-muted); white-space: nowrap; margin-top: 1px; }
+    .equipo-chip-baja { opacity: 0.85; }
+    .baja-aviso {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+      background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 10px 12px; margin-bottom: 16px;
+    }
+
     /* ─── Modal ──────────────────────────────────────────────────── */
     .modal-overlay {
       display: none;
@@ -1162,6 +1192,7 @@
       .kpi-bar { padding: 12px 16px; grid-template-columns: repeat(2, 1fr); }
       .controls { padding: 12px 16px; }
       .legend { padding: 0 16px 10px; }
+      .calendar-hint { padding: 0 16px 8px; }
       .calendar-container { --cal-pad: 16px; }
     }
 
@@ -1588,6 +1619,8 @@
           <div class="legend-item"><div class="legend-dot" style="background:#fbbf24; width:8px; height:8px; border-radius:50%;"></div>Con comentario</div>
         </div>
 
+        <p class="calendar-hint">Arrastra sobre el calendario para marcar varios días y varios equipos a la vez, o usa Shift + clic para marcar desde la última celda.</p>
+
         <!-- Calendar Container -->
         <div class="calendar-container" id="calendarContainer">
           <div class="empty-state" id="emptyState">
@@ -1999,6 +2032,12 @@
               <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 18V6a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h2"/><path d="M14 9h4l4 4v4a1 1 0 0 1-1 1h-1"/><circle cx="6.5" cy="18.5" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/></svg> Equipos del Parque</h3>
               <div class="equipo-list" id="equipoList" style="margin-bottom: 30px;"></div>
 
+              <div id="bajasWrap" style="display:none;">
+                <h3 style="font-size:15px; font-weight:700; margin-bottom:6px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="5" rx="1"/><path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4"/></svg> Equipos dados de baja</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">Ya no aparecen en el calendario desde el mes de su baja. Su historial se conserva en los meses anteriores.</p>
+                <div class="equipo-list" id="bajasList" style="margin-bottom: 30px;"></div>
+              </div>
+
               <h3 style="font-size:15px; font-weight:700; margin-bottom:16px;"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Personal de Mecánicos</h3>
               <div class="equipo-list" id="mecanicoList"></div>
             </div>
@@ -2219,6 +2258,40 @@
     </div>
   </div>
 
+  <!-- ─── Baja Modal ─────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="bajaModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h3 id="bajaTitle">Dar de baja</h3>
+          <div class="modal-date" id="bajaSub"></div>
+        </div>
+        <button class="modal-close" onclick="closeBajaModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="baja-aviso">El equipo deja de aparecer en el calendario desde el mes de la baja. <b>No se borra nada:</b> sus registros y su historial se mantienen en los meses anteriores, y se puede reactivar desde Configuración.</p>
+
+        <label>Motivo</label>
+        <select class="modal-input" id="bajaMotivo">
+          <option value="">-- Seleccionar motivo --</option>
+          <option value="Devuelto a tercero">Devuelto a tercero</option>
+          <option value="Vendido">Vendido</option>
+          <option value="Otro">Otro</option>
+        </select>
+
+        <label>Fecha de baja</label>
+        <input class="modal-input" id="bajaFecha" type="date">
+
+        <label>Detalle (opcional)</label>
+        <input class="modal-input" id="bajaDetalle" placeholder="Ej: devuelto a Arriendos X, vendido a cliente Y…" maxlength="150">
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeBajaModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarBaja()">Dar de baja</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ─── Sync Modal ─────────────────────────────────────────────── -->
   <div class="modal-overlay" id="syncModal">
     <div class="modal">
@@ -2273,11 +2346,17 @@
       cycInspeccionesUrl: 'https://cyc-inspecciones-production.up.railway.app'
     };
 
-    // Drag selection
+    // Selección en el calendario de flota: un rectángulo de equipos (filas) × días (columnas).
+    // Se arma arrastrando el mouse o con Shift+clic desde la última celda tocada.
     let isDragging = false;
-    let dragEquipo = null;
-    let dragStartDay = null;
-    let dragDays = new Set();
+    let dragInicio = null;   // { row, day }
+    let dragFin = null;      // { row, day }
+    let anclaSeleccion = null; // { equipo_id, day } — última celda tocada, para Shift+clic
+    let filasCalendario = [];  // equipo_id de cada fila en el orden en que se dibujó
+
+    // Equipos dados de baja: no se borran; solo aparecen en los meses anteriores a la baja
+    let equiposBaja = [];
+    let bajaEquipo = null;   // equipo que se está dando de baja en el modal
 
     const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const DIAS_SEMANA = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -2413,8 +2492,9 @@
     // ─── API Calls ──────────────────────────────────────────────
     async function loadEquipos() {
       try {
-        const res = await fetch('/api/equipos');
+        const [res, resBajas] = await Promise.all([fetch('/api/equipos'), fetch('/api/equipos/bajas')]);
         equipos = await res.json();
+        equiposBaja = resBajas.ok ? await resBajas.json() : [];
         populateFilterTipo();
         renderEquipoList();
       } catch (e) {
@@ -2495,6 +2575,21 @@
       }
     }
 
+    // Equipos que se dibujan en el mes mostrado: los activos más los dados de baja en un mes
+    // posterior (así los meses pasados siguen mostrando su historial completo).
+    function equiposDelMes() {
+      const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+      const bajas = equiposBaja.filter(e => (e.baja_fecha || '').slice(0, 7) > mes);
+      if (!bajas.length) return equipos;
+      return [...equipos, ...bajas].sort((a, b) => a.equipo_id.localeCompare(b.equipo_id, 'es', { numeric: true }));
+    }
+
+    function fechaCorta(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
     // ─── Render Calendar ────────────────────────────────────────
     function renderCalendar() {
       const container = document.getElementById('calendarContainer');
@@ -2512,7 +2607,8 @@
         return regsDelEquipo(eq.equipo_id).some(r => (r[campo] || '').trim() === valor);
       };
 
-      let filtered = equipos;
+      const equiposMes = equiposDelMes();
+      let filtered = equiposMes;
       if (filterTipo) {
         filtered = filtered.filter(e => e.tipo === filterTipo);
       }
@@ -2529,7 +2625,7 @@
       // Update month label
       document.getElementById('monthLabel').textContent = `${MESES[currentMonth - 1]} ${currentYear}`;
 
-      if (filtered.length === 0 && equipos.length === 0) {
+      if (filtered.length === 0 && equiposMes.length === 0) {
         empty.style.display = 'block';
         const table = container.querySelector('.calendar-table');
         if (table) table.remove();
@@ -2556,14 +2652,26 @@
       }
       html += '</tr></thead><tbody>';
 
-      for (const eq of filtered) {
+      filasCalendario = filtered.map(e => e.equipo_id);
+      filtered.forEach((eq, row) => {
         const sit = resumenEquipos[eq.equipo_id] || {};
         const est = ESTADO_POR_KEY[sit.estado];
         const arrendado = ESTADOS_ARRENDADO.includes(sit.estado);
         const clienteTxt = arrendado && sit.cliente ? escHtml(sit.cliente) : '<span class="info-vacio">—</span>';
         const estadoTxt = est ? `<div class="info-estado"><span class="sdot" style="background:${est.color}"></span>${est.corto}</div>` : '';
         const vacio = '<span class="info-vacio">—</span>';
-        html += `<tr><td class="td-equipo"><div class="equipo-name">${eq.equipo_id}</div></td>`;
+        const idJs = escHtml(JSON.stringify(eq.equipo_id));
+        if (eq.baja_fecha) {
+          html += `<tr class="row-baja"><td class="td-equipo" title="${escHtml(`Dado de baja el ${fechaCorta(eq.baja_fecha)}${eq.baja_motivo ? ' — ' + eq.baja_motivo : ''}`)}">
+            <div class="equipo-name">${escHtml(eq.equipo_id)}</div>
+            <div class="equipo-baja-tag">Baja ${fechaCorta(eq.baja_fecha)}</div></td>`;
+        } else {
+          html += `<tr><td class="td-equipo"><div class="td-equipo-inner">
+            <div class="equipo-name">${escHtml(eq.equipo_id)}</div>
+            <button class="baja-btn" type="button" title="Dar de baja del calendario" aria-label="Dar de baja ${escHtml(eq.equipo_id)}"
+                    onclick="openBajaModal(${idJs})"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="5" rx="1"/><path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4"/></svg></button>
+          </div></td>`;
+        }
         html += `<td class="td-info col-tipo" title="${escHtml(eq.tipo || '')}">${eq.tipo ? escHtml(eq.tipo) : vacio}</td>`;
         html += `<td class="td-info col-patente">${eq.patente ? escHtml(eq.patente) : vacio}</td>`;
         html += `<td class="td-info col-cliente" title="${escHtml(sit.cliente || '')}"><div>${clienteTxt}</div>${estadoTxt}</td>`;
@@ -2580,19 +2688,18 @@
           html += `<td class="td-day${isToday ? ' today-col' : ''}">
             <div class="day-cell${hasComment}${isToday ? ' today-cell' : ''}"
                  data-estado="${estado}"
-                 data-equipo="${eq.equipo_id}"
+                 data-equipo="${escHtml(eq.equipo_id)}"
                  data-fecha="${dateStr}"
+                 data-row="${row}"
                  data-day="${d}"
                  title="${title}"
-                 onclick="openCell('${eq.equipo_id}','${dateStr}')"
-                 onmousedown="startDrag(event, '${eq.equipo_id}', ${d})"
-                 onmouseenter="continueDrag(event, '${eq.equipo_id}', ${d})"
-                 onmouseup="endDrag(event)">
+                 onmousedown="startDrag(event, ${row}, ${d})"
+                 onmouseenter="continueDrag(${row}, ${d})">
             </div>
           </td>`;
         }
         html += '</tr>';
-      }
+      });
       html += '</tbody></table>';
       
       const existingTable = container.querySelector('.calendar-table');
@@ -2602,54 +2709,77 @@
     }
 
     // ─── Drag Selection ─────────────────────────────────────────
-    function startDrag(e, equipoId, day) {
+    // Arrastrar marca un rectángulo: horizontal = días, vertical = equipos.
+    // Shift+clic marca desde la última celda tocada hasta la celda clicada.
+    // Un clic simple (sin arrastrar) abre la celda sola, como antes.
+    function startDrag(e, row, day) {
       if (e.button !== 0) return; // left click only
       e.preventDefault();
+      const filaAncla = anclaSeleccion ? filasCalendario.indexOf(anclaSeleccion.equipo_id) : -1;
+      if (e.shiftKey && filaAncla >= 0) {
+        dragInicio = { row: filaAncla, day: anclaSeleccion.day };
+        dragFin = { row, day };
+        highlightDrag();
+        abrirSeleccion();
+        return;
+      }
       isDragging = true;
-      dragEquipo = equipoId;
-      dragStartDay = day;
-      dragDays = new Set([day]);
+      dragInicio = { row, day };
+      dragFin = { row, day };
       highlightDrag();
     }
 
-    function continueDrag(e, equipoId, day) {
-      if (!isDragging || equipoId !== dragEquipo) return;
-      const minD = Math.min(dragStartDay, day);
-      const maxD = Math.max(dragStartDay, day);
-      dragDays = new Set();
-      for (let d = minD; d <= maxD; d++) dragDays.add(d);
-      highlightDrag();
-    }
-
-    function endDrag(e) {
+    function continueDrag(row, day) {
       if (!isDragging) return;
-      isDragging = false;
-      if (dragDays.size > 1) {
+      if (dragFin && dragFin.row === row && dragFin.day === day) return;
+      dragFin = { row, day };
+      highlightDrag();
+    }
+
+    // Equipos y días que abarca la selección actual
+    function seleccionActual() {
+      if (!dragInicio || !dragFin) return { ids: [], dias: [] };
+      const r0 = Math.min(dragInicio.row, dragFin.row), r1 = Math.max(dragInicio.row, dragFin.row);
+      const d0 = Math.min(dragInicio.day, dragFin.day), d1 = Math.max(dragInicio.day, dragFin.day);
+      const ids = filasCalendario.slice(r0, r1 + 1);
+      const dias = [];
+      for (let d = d0; d <= d1; d++) dias.push(d);
+      return { ids, dias };
+    }
+
+    function abrirSeleccion() {
+      const { ids, dias } = seleccionActual();
+      if (!ids.length) return;
+      if (ids.length === 1 && dias.length === 1) {
+        clearDragHighlight();
+        const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+        openCell(ids[0], `${mes}-${String(dias[0]).padStart(2, '0')}`);
+      } else {
         openBatchModal();
       }
-      clearDragHighlight();
+      anclaSeleccion = { equipo_id: filasCalendario[dragFin.row], day: dragFin.day };
     }
 
     document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        if (dragDays.size > 1) {
-          openBatchModal();
-        }
-        clearDragHighlight();
-      }
+      if (!isDragging) return;
+      isDragging = false;
+      abrirSeleccion();
     });
 
     function highlightDrag() {
       clearDragHighlight();
-      document.querySelectorAll(`.day-cell[data-equipo="${dragEquipo}"]`).forEach(cell => {
-        const d = parseInt(cell.dataset.day);
-        if (dragDays.has(d)) cell.classList.add('drag-highlight');
+      const { ids, dias } = seleccionActual();
+      if (!ids.length) return;
+      const r0 = Math.min(dragInicio.row, dragFin.row), r1 = Math.max(dragInicio.row, dragFin.row);
+      const d0 = dias[0], d1 = dias[dias.length - 1];
+      document.querySelectorAll('.calendar-flota .day-cell').forEach(cell => {
+        const r = +cell.dataset.row, d = +cell.dataset.day;
+        if (r >= r0 && r <= r1 && d >= d0 && d <= d1) cell.classList.add('drag-highlight');
       });
     }
 
     function clearDragHighlight() {
-      document.querySelectorAll('.day-cell.drag-highlight').forEach(c => c.classList.remove('drag-highlight'));
+      document.querySelectorAll('.calendar-flota .day-cell.drag-highlight').forEach(c => c.classList.remove('drag-highlight'));
     }
 
     // ─── Contracts Hub Helpers ──────────────────────────────────
@@ -2716,15 +2846,26 @@
 
     function openBatchModal() {
       const mes = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-      const sortedDays = [...dragDays].sort((a, b) => a - b);
+      const { ids, dias: sortedDays } = seleccionActual();
       editingCell = {
-        equipo_id: dragEquipo,
+        equipo_ids: ids,
         fechas: sortedDays.map(d => `${mes}-${String(d).padStart(2, '0')}`),
         isBatch: true
       };
 
-      document.getElementById('modalTitle').textContent = dragEquipo;
-      document.getElementById('modalDate').textContent = `${sortedDays.length} días seleccionados (${sortedDays[0]} - ${sortedDays[sortedDays.length - 1]} ${MESES[currentMonth - 1]})`;
+      const rangoDias = sortedDays.length === 1
+        ? `${sortedDays[0]} ${MESES[currentMonth - 1]}`
+        : `${sortedDays[0]} - ${sortedDays[sortedDays.length - 1]} ${MESES[currentMonth - 1]}`;
+      const nDias = `${sortedDays.length} ${sortedDays.length === 1 ? 'día' : 'días'}`;
+      if (ids.length === 1) {
+        document.getElementById('modalTitle').textContent = ids[0];
+        document.getElementById('modalDate').textContent = `${nDias} seleccionados (${rangoDias})`;
+      } else {
+        const lista = ids.length <= 4 ? ids.join(', ') : `${ids.slice(0, 3).join(', ')} y ${ids.length - 3} más`;
+        document.getElementById('modalTitle').textContent = `${ids.length} equipos`;
+        document.getElementById('modalDate').textContent =
+          `${lista} · ${nDias} (${rangoDias}) · ${ids.length * sortedDays.length} celdas`;
+      }
 
       // Reset
       selectedStatus = 'disponible';
@@ -2738,7 +2879,9 @@
       document.getElementById('modalContratoManual').style.display = 'none';
       
       document.getElementById('modalComentario').value = '';
-      setModalUbicacion(resumenEquipos[dragEquipo]?.ubicacion || '');
+      // Si todos los equipos marcados están en la misma ubicación, se propone esa
+      const ubis = new Set(ids.map(id => resumenEquipos[id]?.ubicacion || ''));
+      setModalUbicacion(ubis.size === 1 ? [...ubis][0] : '');
 
       document.getElementById('cellModal').classList.add('active');
     }
@@ -2810,6 +2953,7 @@
     function closeModal() {
       document.getElementById('cellModal').classList.remove('active');
       editingCell = null;
+      clearDragHighlight();
     }
 
     async function saveCell() {
@@ -2838,13 +2982,14 @@
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              equipo_id: editingCell.equipo_id,
+              equipo_ids: editingCell.equipo_ids,
               fechas: editingCell.fechas,
               ...payload
             })
           });
-          if (!res.ok) throw new Error('Error batch');
-          toast(`${editingCell.fechas.length} días actualizados`, 'success');
+          if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Error batch');
+          const nEq = editingCell.equipo_ids.length, nDias = editingCell.fechas.length;
+          toast(nEq === 1 ? `${nDias} días actualizados` : `${nEq} equipos × ${nDias} días actualizados`, 'success');
         } else {
           const res = await fetch('/api/calendario', {
             method: 'PUT',
@@ -2870,7 +3015,7 @@
       currentMonth += delta;
       if (currentMonth > 12) { currentMonth = 1; currentYear++; }
       if (currentMonth < 1)  { currentMonth = 12; currentYear--; }
-      loadRegistros().then(() => {
+      Promise.all([loadRegistros(), loadResumen()]).then(() => {
         loadStats();
         renderCalendar();
       });
@@ -2880,7 +3025,7 @@
       const now = new Date();
       currentYear = now.getFullYear();
       currentMonth = now.getMonth() + 1;
-      loadRegistros().then(() => {
+      Promise.all([loadRegistros(), loadResumen()]).then(() => {
         loadStats();
         renderCalendar();
       });
@@ -2901,9 +3046,82 @@
             <div class="eq-id">${e.equipo_id}</div>
             <div class="eq-tipo">${e.tipo || 'Sin tipo'} ${e.patente ? '· ' + e.patente : ''}</div>
           </div>
-          <button class="delete-btn" onclick="deleteEquipo(${e.id})" title="Eliminar">×</button>
+          <button class="delete-btn" onclick="openBajaModal(${escHtml(JSON.stringify(e.equipo_id))})" title="Dar de baja">×</button>
         </div>
       `).join('');
+      renderBajasList();
+    }
+
+    function renderBajasList() {
+      const wrap = document.getElementById('bajasWrap');
+      const el = document.getElementById('bajasList');
+      if (!wrap || !el) return;
+      wrap.style.display = equiposBaja.length ? '' : 'none';
+      el.innerHTML = equiposBaja.map(e => `
+        <div class="equipo-chip equipo-chip-baja">
+          <div class="equipo-chip-info">
+            <div class="eq-id">${escHtml(e.equipo_id)}</div>
+            <div class="eq-tipo">Baja ${fechaCorta(e.baja_fecha)}${e.baja_motivo ? ' · ' + escHtml(e.baja_motivo) : ''}</div>
+          </div>
+          <button class="btn btn-sm" onclick="reactivarEquipo(${e.id}, ${escHtml(JSON.stringify(e.equipo_id))})" title="Volver a mostrarlo en el calendario">Reactivar</button>
+        </div>
+      `).join('');
+    }
+
+    // ─── Dar de baja ────────────────────────────────────────────
+    function openBajaModal(equipoId) {
+      const eq = equipos.find(e => e.equipo_id === equipoId);
+      if (!eq) return;
+      bajaEquipo = eq;
+      document.getElementById('bajaTitle').textContent = `Dar de baja ${eq.equipo_id}`;
+      document.getElementById('bajaSub').textContent = [eq.tipo, eq.patente].filter(Boolean).join(' · ');
+      document.getElementById('bajaMotivo').value = '';
+      document.getElementById('bajaDetalle').value = '';
+      const hoy = new Date();
+      document.getElementById('bajaFecha').value =
+        `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+      document.getElementById('bajaModal').classList.add('active');
+    }
+
+    function closeBajaModal() {
+      document.getElementById('bajaModal').classList.remove('active');
+      bajaEquipo = null;
+    }
+
+    async function confirmarBaja() {
+      if (!bajaEquipo) return;
+      const motivoBase = document.getElementById('bajaMotivo').value;
+      const detalle = document.getElementById('bajaDetalle').value.trim();
+      const fecha = document.getElementById('bajaFecha').value;
+      if (!motivoBase) return toast('Selecciona el motivo de la baja', 'error');
+      if (!fecha) return toast('Indica la fecha de la baja', 'error');
+      const motivo = detalle ? `${motivoBase} — ${detalle}` : motivoBase;
+      const eq = bajaEquipo;
+      try {
+        const res = await fetch(`/api/equipos/${eq.id}/baja`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fecha, motivo })
+        });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Error');
+        closeBajaModal();
+        toast(`${eq.equipo_id} dado de baja. Su historial se conserva.`, 'success');
+        await loadAll();
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      }
+    }
+
+    async function reactivarEquipo(id, equipoId) {
+      if (!confirm(`¿Reactivar ${equipoId}? Volverá a aparecer en el calendario.`)) return;
+      try {
+        const res = await fetch(`/api/equipos/${id}/reactivar`, { method: 'POST' });
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Error');
+        toast(`${equipoId} reactivado`, 'success');
+        await loadAll();
+      } catch (e) {
+        toast('Error: ' + e.message, 'error');
+      }
     }
 
     async function addEquipo() {
@@ -2923,17 +3141,6 @@
         document.getElementById('newEquipoTipo').value = '';
         document.getElementById('newEquipoPatente').value = '';
         toast('Equipo agregado', 'success');
-        await loadAll();
-      } catch (e) {
-        toast('Error: ' + e.message, 'error');
-      }
-    }
-
-    async function deleteEquipo(id) {
-      if (!confirm('¿Eliminar este equipo del parque?')) return;
-      try {
-        await fetch(`/api/equipos/${id}`, { method: 'DELETE' });
-        toast('Equipo eliminado', 'success');
         await loadAll();
       } catch (e) {
         toast('Error: ' + e.message, 'error');
@@ -3001,6 +3208,9 @@
     document.getElementById('cellModal').addEventListener('click', function(e) {
       if (e.target === this) closeModal();
     });
+    document.getElementById('bajaModal').addEventListener('click', function(e) {
+      if (e.target === this) closeBajaModal();
+    });
     document.getElementById('syncModal').addEventListener('click', function(e) {
       if (e.target === this) closeSyncModal();
     });
@@ -3010,7 +3220,7 @@
 
     // Keyboard
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') { closeModal(); closeSyncModal(); closeMecModal(); }
+      if (e.key === 'Escape') { closeModal(); closeSyncModal(); closeMecModal(); closeBajaModal(); }
     });
 
     // ─── Mecánicos & Ubicaciones Backend Integrations ───────────
